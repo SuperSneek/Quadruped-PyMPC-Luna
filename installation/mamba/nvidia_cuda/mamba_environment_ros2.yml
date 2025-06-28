@@ -16,8 +16,6 @@ dependencies:
 - scipy==1.15.1  
 - pinocchio
 - adam-robotics[all]
-- ros-humble-desktop
-- ros-humble-plotjuggler-ros
 - compilers 
 - cmake 
 - pkg-config 
