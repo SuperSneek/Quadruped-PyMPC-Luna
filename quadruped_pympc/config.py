@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'aliengo'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'luna'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
 
 from gym_quadruped.robot_cfgs import RobotConfig, get_robot_config
 robot_cfg: RobotConfig = get_robot_config(robot_name=robot)
@@ -49,6 +49,12 @@ elif (robot == 'hyqreal'):
     
 elif (robot == 'mini_cheetah'):
     mass = 12.5
+    inertia = np.array([[1.58460467e-01, 1.21660000e-04, -1.55444692e-02],
+                        [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
+                        [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
+    
+elif robot == 'luna':
+    mass = 10.0
     inertia = np.array([[1.58460467e-01, 1.21660000e-04, -1.55444692e-02],
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
@@ -96,7 +102,7 @@ mpc_params = {
     'use_warm_start':                          False,
 
     # this enables integrators for height, linear velocities, roll and pitch
-    'use_integrators':                         False,
+    'use_integrators':                         True,
     'alpha_integrator':                        0.1,
     'integrator_cap':                          [0.5, 0.2, 0.2, 0.0, 0.0, 1.0],
 
