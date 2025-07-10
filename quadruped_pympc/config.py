@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'luna'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'luna'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah', 'luna'  # TODO: Load from robot_descriptions.py
 
 from gym_quadruped.robot_cfgs import RobotConfig, get_robot_config
 robot_cfg: RobotConfig = get_robot_config(robot_name=robot)
@@ -54,7 +54,7 @@ elif (robot == 'mini_cheetah'):
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     
 elif robot == 'luna':
-    mass = 10.0
+    mass = 8.0
     inertia = np.array([[1.58460467e-01, 1.21660000e-04, -1.55444692e-02],
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
@@ -173,7 +173,7 @@ mpc_params = {
     'control_parametrization':                 'cubic_spline', # 'cubic_spline', 'linear_spline', 'zero_order'
     'num_splines':                             2,  # number of splines to use for the control parametrization
     'num_parallel_computations':               10000,  # More is better, but slower computation!
-    'num_sampling_iterations':                 1,  # More is better, but slower computation!
+    'num_sampling_iterations':                 3,  # More is better, but slower computation!
     'device':                                  'gpu',  # 'gpu', 'cpu'
     # convariances for the sampling methods
     'sigma_cem_mppi':                          3,
@@ -187,10 +187,10 @@ mpc_params = {
 
 simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit'
-    'swing_position_gain_fb':      500,
+    'swing_position_gain_fb':      100,
     'swing_velocity_gain_fb':      10,
-    'impedence_joint_position_gain':  10.0,
-    'impedence_joint_velocity_gain':  2.0,
+    'impedence_joint_position_gain':  20.0,
+    'impedence_joint_velocity_gain':  1.0,
 
     'step_height':                 0.2 * hip_height,  
 
@@ -200,7 +200,7 @@ simulation_params = {
     # this is the integration time used in the simulator
     'dt':                          0.002,
 
-    'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    'gait':                        'full_stance',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
                                     'crawl': {'step_freq': 0.5, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value},
                                     'pace': {'step_freq': 1.4, 'duty_factor': 0.7, 'type': GaitType.PACE.value},
