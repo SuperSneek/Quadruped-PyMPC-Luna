@@ -86,8 +86,8 @@ mpc_params = {
     'mu':                                      0.5,
 
     # this is used to have a smaller dt near the start of the horizon
-    'use_nonuniform_discretization':           False,
-    'horizon_fine_grained':                    2,
+    'use_nonuniform_discretization':           True,
+    'horizon_fine_grained':                    3,
     'dt_fine_grained':                         0.01,
 
     # if this is true, we optimize the step frequency as well
@@ -173,7 +173,7 @@ mpc_params = {
     'control_parametrization':                 'cubic_spline', # 'cubic_spline', 'linear_spline', 'zero_order'
     'num_splines':                             2,  # number of splines to use for the control parametrization
     'num_parallel_computations':               10000,  # More is better, but slower computation!
-    'num_sampling_iterations':                 3,  # More is better, but slower computation!
+    'num_sampling_iterations':                 7,  # More is better, but slower computation!
     'device':                                  'gpu',  # 'gpu', 'cpu'
     # convariances for the sampling methods
     'sigma_cem_mppi':                          3,
@@ -187,10 +187,10 @@ mpc_params = {
 
 simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit'
-    'swing_position_gain_fb':      100,
+    'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
-    'impedence_joint_position_gain':  20.0,
-    'impedence_joint_velocity_gain':  1.0,
+    'impedence_joint_position_gain':  10.0,
+    'impedence_joint_velocity_gain':  2.0,
 
     'step_height':                 0.2 * hip_height,  
 
@@ -200,7 +200,7 @@ simulation_params = {
     # this is the integration time used in the simulator
     'dt':                          0.002,
 
-    'gait':                        'full_stance',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
                                     'crawl': {'step_freq': 0.5, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value},
                                     'pace': {'step_freq': 1.4, 'duty_factor': 0.7, 'type': GaitType.PACE.value},
@@ -228,4 +228,3 @@ simulation_params = {
     'scene':                       'flat',  # flat, random_boxes, random_pyramids, perlin
 
     }
-# -----------------------------------------------------------------------
