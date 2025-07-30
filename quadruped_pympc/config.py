@@ -54,10 +54,10 @@ elif (robot == 'mini_cheetah'):
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     
 elif robot == 'luna':
-    mass = 8.0
-    inertia = np.array([[1.58460467e-01, 1.21660000e-04, -1.55444692e-02],
-                        [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
-                        [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
+    mass = 5.14
+    inertia = np.array([[0.134, 0.0, -0.02],
+                        [0.0, 0.150, 0.0], 
+                        [-0.02, 0.0, 0.022]])
 
 
 gravity_constant = 9.81 # Exposed in case of different gravity conditions
@@ -142,7 +142,7 @@ mpc_params = {
 
     # ONLY ONE CAN BE TRUE AT A TIME (only gradient)
     'use_static_stability':                    False,
-    'use_zmp_stability':                       False,
+    'use_zmp_stability':                       True,
     'trot_stability_margin':                   0.04,
     'pace_stability_margin':                   0.1,
     'crawl_stability_margin':                  0.04,  # in general, 0.02 is a good value
@@ -189,8 +189,8 @@ simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit'
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
-    'impedence_joint_position_gain':  10.0,
-    'impedence_joint_velocity_gain':  2.0,
+    'impedence_joint_position_gain':  50.0,
+    'impedence_joint_velocity_gain':  10.0,
 
     'step_height':                 0.2 * hip_height,  
 
@@ -200,7 +200,7 @@ simulation_params = {
     # this is the integration time used in the simulator
     'dt':                          0.002,
 
-    'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    'gait':                        'full_stance',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
                                     'crawl': {'step_freq': 0.5, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value},
                                     'pace': {'step_freq': 1.4, 'duty_factor': 0.7, 'type': GaitType.PACE.value},
