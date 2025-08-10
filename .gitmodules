@@ -4,4 +4,4 @@
 
 [submodule "quadruped_pympc/gym_quadruped"]
 	path = quadruped_pympc/gym_quadruped
-	url = https://github.com/iit-DLSLab/gym-quadruped.git
+	url = git@github.com:SuperSneek/gym_quadruped_luna.git

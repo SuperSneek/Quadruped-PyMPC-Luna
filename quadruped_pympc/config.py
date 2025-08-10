@@ -54,7 +54,7 @@ elif (robot == 'mini_cheetah'):
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     
 elif robot == 'luna':
-    mass = 5.14
+    mass = 7.14
     inertia = np.array([[0.134, 0.0, -0.02],
                         [0.0, 0.150, 0.0], 
                         [-0.02, 0.0, 0.022]])
@@ -189,8 +189,8 @@ simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit'
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
-    'impedence_joint_position_gain':  50.0,
-    'impedence_joint_velocity_gain':  10.0,
+    'impedence_joint_position_gain':  10.0,
+    'impedence_joint_velocity_gain':  2.0,
 
     'step_height':                 0.2 * hip_height,  
 
@@ -200,7 +200,7 @@ simulation_params = {
     # this is the integration time used in the simulator
     'dt':                          0.002,
 
-    'gait':                        'full_stance',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
                                     'crawl': {'step_freq': 0.5, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value},
                                     'pace': {'step_freq': 1.4, 'duty_factor': 0.7, 'type': GaitType.PACE.value},
@@ -225,6 +225,6 @@ simulation_params = {
 
     'use_inertia_recomputation':   True,
 
-    'scene':                       'flat',  # flat, random_boxes, random_pyramids, perlin
+    'scene':                       'random_boxes',  # flat, random_boxes, random_pyramids, perlin
 
     }
