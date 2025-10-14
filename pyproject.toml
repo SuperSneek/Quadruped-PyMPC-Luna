@@ -42,7 +42,6 @@ dependencies = [
     #"pin",
     "cmake",
     "mujoco>=3.3.1",
-    "gym_quadruped @ git+https://github.com/iit-DLSLab/gym-quadruped.git",
 ]
 
 [project.optional-dependencies]
