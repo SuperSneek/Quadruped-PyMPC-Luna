@@ -6,7 +6,7 @@
 
 
 ## Overview
-This repo contains a model predictive controller based on the **single rigid body model** and written in **Python**. It comes in two flavours: gradient-based via [acados](https://github.com/acados/acados) or sampling-based via [jax](https://github.com/google/jax). The controller is tested on real robots and is compatible with [Mujoco](https://mujoco.org/). See [the end of this README](https://github.com/iit-DLSLab/Quadruped-PyMPC?tab=readme-ov-file#citing-this-work) if you want to cite this work.
+This repo contains a model predictive controller based on the **single rigid body model** and written in **Python**. It comes in two flavours: gradient-based via [acados](https://github.com/acados/acados) or sampling-based via [jax](https://github.com/google/jax). The controller is tested on real robots and is compatible with [Mujoco](https://mujoco.org/). 
 
 
 Features gradient-based mpc:
@@ -25,6 +25,32 @@ Features sampling-based mpc:
 - implements different strategies: [random sampling](https://arxiv.org/pdf/2212.00541.pdf), [mppi](https://sites.gatech.edu/acds/mppi/), or [cemppi](https://arxiv.org/pdf/2203.16633.pdf) 
 - different control parametrizations: zero-order, linear splines or cubic splines (see [mujoco-mpc](https://arxiv.org/pdf/2212.00541.pdf))
 
+## Citing this work
+
+If you find the work useful, please consider citing one of our works: 
+
+#### [On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion (IROS-2024)](https://arxiv.org/abs/2403.11383):
+```
+@INPROCEEDINGS{turrisi2024sampling,
+  author={Turrisi, Giulio and Modugno, Valerio and Amatucci, Lorenzo and Kanoulas, Dimitrios and Semini, Claudio},
+  booktitle={2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion}, 
+  year={2024},
+  pages={13757-13764},
+  doi={10.1109/IROS58592.2024.10801698}}
+```
+#### [Adaptive Non-Linear Centroidal MPC With Stability Guarantees for Robust Locomotion of Legged Robots (RAL-2025)](https://arxiv.org/abs/2409.01144):
+```
+@ARTICLE{elobaid2025adaptivestablempc,
+  author={Elobaid, Mohamed and Turrisi, Giulio and Rapetti, Lorenzo and Romualdi, Giulio and Dafarra, Stefano and Kawakami, Tomohiro and Chaki, Tomohiro and Yoshiike, Takahide and Semini, Claudio and Pucci, Daniele},
+  journal={IEEE Robotics and Automation Letters}, 
+  title={Adaptive Non-Linear Centroidal MPC With Stability Guarantees for Robust Locomotion of Legged Robots}, 
+  year={2025},
+  volume={10},
+  number={3},
+  pages={2806-2813},
+  doi={10.1109/LRA.2025.3536296}}
+```
 
 
 ## Dependencies
@@ -125,41 +151,19 @@ During the installation procedure, use the file **mamba_environment_ros2.yml**. 
   python3 ros2/run_controller.py
   ```
 
-For a real-robot deployment, remember to put inside the script these flags to false
+4. if you want to test the above node with a simulator, for example to test ros2 delay, you can run 
 
   ```
-  USE_MUJOCO_RENDER = False
-  USE_MUJOCO_SIMULATION = False
+  python3 ros2/run_simulator.py
   ```
 
-and to use a nice [state estimator](https://github.com/iit-DLSLab/muse). 
+5. joystick
 
-## Citing this work
+  ```
+  ros2 launch teleop_twist_joy teleop-launch.py joy_config:='xbox'
+  ```
 
-If you find the work useful, please consider citing one of our works: 
-
-#### [On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion (IROS-2024)](https://arxiv.org/abs/2403.11383):
-```
-@INPROCEEDINGS{turrisi2024sampling,
-  author={Turrisi, Giulio and Modugno, Valerio and Amatucci, Lorenzo and Kanoulas, Dimitrios and Semini, Claudio},
-  booktitle={2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
-  title={On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion}, 
-  year={2024},
-  pages={13757-13764},
-  doi={10.1109/IROS58592.2024.10801698}}
-```
-#### [Adaptive Non-Linear Centroidal MPC With Stability Guarantees for Robust Locomotion of Legged Robots (RAL-2025)](https://arxiv.org/abs/2409.01144):
-```
-@ARTICLE{elobaid2025adaptivestablempc,
-  author={Elobaid, Mohamed and Turrisi, Giulio and Rapetti, Lorenzo and Romualdi, Giulio and Dafarra, Stefano and Kawakami, Tomohiro and Chaki, Tomohiro and Yoshiike, Takahide and Semini, Claudio and Pucci, Daniele},
-  journal={IEEE Robotics and Automation Letters}, 
-  title={Adaptive Non-Linear Centroidal MPC With Stability Guarantees for Robust Locomotion of Legged Robots}, 
-  year={2025},
-  volume={10},
-  number={3},
-  pages={2806-2813},
-  doi={10.1109/LRA.2025.3536296}}
-```
+6. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse) 
 
 ## Maintainer
 

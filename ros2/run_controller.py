@@ -1,6 +1,7 @@
 import rclpy 
 from rclpy.node import Node 
 from dls2_msgs.msg import BaseStateMsg, BlindStateMsg, ControlSignalMsg, TrajectoryGeneratorMsg
+from sensor_msgs.msg import Joy
 
 import time
 import numpy as np
@@ -34,15 +35,18 @@ pid = os.getpid()
 print("PID: ", pid)
 os.system("sudo renice -n -21 -p " + str(pid))
 os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
-affinity_mask = {4, 5} 
-os.sched_setaffinity(pid, affinity_mask)
+
+# to reserve the core 4, 5 for the process, add in etc/default/grub
+#GRUB_CMDLINE_LINUX_DEFAULT="quiet splash isolcpus=4-5" in etc/default/grub
+# and then sudo update-grub
+# and uncomment the line below
+#affinity_mask = {4, 5} 
+#os.sched_setaffinity(pid, affinity_mask)
+
 #for real time, launch it with chrt -r 99 python3 run_controller.py
-# to reserve the core 4, 5 for the process, ass
-#GRUB_CMDLINE_LINUX_DEFAULT="quiet splash isolcpus=4-5" in etc/default/grub, then sudo update-grub
 
 
-USE_MUJOCO_RENDER = True
-USE_MUJOCO_SIMULATION = True
+USE_DLS_CONVENTION = False
 
 USE_THREADED_MPC = False
 USE_PROCESS_MPC = False
@@ -54,6 +58,9 @@ SCHEDULER_FREQ = 250 # this is only valid if USE_SCHEDULER is True
 USE_FIXED_LOOP_TIME = False # This is used to fix the clock time of periodic gait gen to 1/SCHEDULER_FREQ
 USE_SATURATED_LOOP_TIME = True # This is used to cap the clock time of periodic gait gen to max 250Hz
 
+USE_SMOOTH_VELOCITY = False
+USE_SMOOTH_HEIGHT = True
+
 # Shell for the controllers ----------------------------------------------
 class Quadruped_PyMPC_Node(Node):
     def __init__(self):
@@ -62,15 +69,12 @@ class Quadruped_PyMPC_Node(Node):
         # Subscribers and Publishers
         self.subscription_base_state = self.create_subscription(BaseStateMsg,"/dls2/base_state", self.get_base_state_callback, 1)
         self.subscription_blind_state = self.create_subscription(BlindStateMsg,"/dls2/blind_state", self.get_blind_state_callback, 1)
+        self.subscription_joy = self.create_subscription(Joy,"joy", self.get_joy_callback, 1)
         self.publisher_control_signal = self.create_publisher(ControlSignalMsg,"dls2/quadruped_pympc_torques", 1)
         self.publisher_trajectory_generator = self.create_publisher(TrajectoryGeneratorMsg,"dls2/trajectory_generator", 1)
-        if(USE_SCHEDULER or USE_MUJOCO_SIMULATION):
+        if(USE_SCHEDULER):
             self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_control_callback)
         
-        # Only for debugging purposes, to see the base and blind state from the internal simulation
-        if(USE_MUJOCO_SIMULATION):
-            self.publisher_base_blind_state_debug = self.create_publisher(BaseStateMsg, "/dls2/base_state_debug", 1)
-            self.publisher_blind_state_debug = self.create_publisher(BlindStateMsg, "/dls2/blind_state_debug", 1)
 
         # Safety check to not do anything until a first base and blind state are received
         self.first_message_base_arrived = False
@@ -110,13 +114,6 @@ class Quadruped_PyMPC_Node(Node):
         self.env.reset(random=False)
         self.last_mpc_time = time.time()
 
-
-        
-        self.last_render_time = time.time()
-        if USE_MUJOCO_RENDER:
-            self.env.render()
-
-        
 
         # Quadruped PyMPC controller initialization -------------------------------------------------------------
         from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
@@ -168,7 +165,6 @@ class Quadruped_PyMPC_Node(Node):
             process_mpc.start()
             
 
-
         # Interactive Command Line ----------------------------
         from console import Console
         self.console = Console(controller_node=self)
@@ -178,11 +174,10 @@ class Quadruped_PyMPC_Node(Node):
 
 
         # Init for real robot and simulation gain, since real robot needs different values
-        if(USE_MUJOCO_SIMULATION == False):
-            self.wb_interface.stc.position_gain_fb = 100
-            self.wb_interface.stc.velocity_gain_fb = 10
-            self.wb_interface.stc.use_feedback_linearization = False
-            self.wb_interface.stc.use_friction_compensation = False
+        #    self.wb_interface.stc.position_gain_fb = 100
+        #    self.wb_interface.stc.velocity_gain_fb = 10
+        #    self.wb_interface.stc.use_feedback_linearization = False
+        #    self.wb_interface.stc.use_friction_compensation = False
 
 
     def compute_mpc_thread_callback(self):
@@ -258,12 +253,24 @@ class Quadruped_PyMPC_Node(Node):
                     last_mpc_process_time = time.time()
 
 
+
     def get_base_state_callback(self, msg):
         
-        self.position = np.array(msg.position)
+        if(USE_SMOOTH_HEIGHT):
+            # Smooth the height of the base
+            self.position[2] = 0.5*self.position[2] + 0.5*np.array(msg.position)[2]
+        else:
+            self.position[2] = np.array(msg.position)[2]
+        self.position[0:2] = np.array(msg.position)[0:2]
+
+
+        if(USE_SMOOTH_VELOCITY):
+            self.linear_velocity = 0.5*self.linear_velocity + 0.5*np.array(msg.linear_velocity)
+        else:
+            self.linear_velocity = np.array(msg.linear_velocity)
+
         # For the quaternion, the order is [w, x, y, z] on mujoco, and [x, y, z, w] on DLS2
         self.orientation = np.roll(np.array(msg.orientation), 1)
-        self.linear_velocity = np.array(msg.linear_velocity)
         # For the angular velocity, mujoco is in the base frame, and DLS2 is in the world frame
         self.angular_velocity = np.array(msg.angular_velocity) 
         self.stance_status = np.array(msg.stance_status)
@@ -278,17 +285,39 @@ class Quadruped_PyMPC_Node(Node):
         self.joint_velocities = np.array(msg.joints_velocity)
         self.feet_contact = np.array(msg.feet_contact)
 
-        # Fix convention DLS2
-        self.joint_positions[0] = -self.joint_positions[0]
-        self.joint_positions[6] = -self.joint_positions[6]
-        self.joint_velocities[0] = -self.joint_velocities[0]
-        self.joint_velocities[6] = -self.joint_velocities[6]
+        if(USE_DLS_CONVENTION):
+            # Fix convention DLS2
+            self.joint_positions[0] = -self.joint_positions[0]
+            self.joint_positions[6] = -self.joint_positions[6]
+            self.joint_velocities[0] = -self.joint_velocities[0]
+            self.joint_velocities[6] = -self.joint_velocities[6]
 
         self.first_message_joints_arrived = True
         
 
         if(not USE_SCHEDULER):
             self.compute_control_callback()
+
+
+
+    def get_joy_callback(self, msg):
+        """
+        Callback function to handle joystick input. Joystick used is a 
+        8Bitdi Ultimate 2C Wireless Controller.
+        """
+        self.env._ref_base_lin_vel_H[0] = msg.axes[1]/3.5  # Forward/Backward
+        self.env._ref_base_lin_vel_H[1] = msg.axes[0]/3.5  # Left/Right
+        self.env._ref_base_ang_yaw_dot = msg.axes[3]/2.  # Yaw
+
+
+        #kill the node if the button is pressed
+        if msg.buttons[8] == 1:
+            self.get_logger().info("Joystick button pressed, shutting down the node.") 
+            # This will kill the robot hal
+            os.system("kill -9 $(ps -u | grep -m 1 hal | grep -o \"^[^ ]* *[0-9]*\" | grep -o \"[0-9]*\")")
+            # This will kill the process running this script
+            os.system("pkill -f play_ros2.py") 
+            exit(0)
 
 
 
@@ -310,39 +339,25 @@ class Quadruped_PyMPC_Node(Node):
                     simulation_dt = 0.005
 
         # Safety check to not do anything until a first base and blind state are received
-        if(not USE_MUJOCO_SIMULATION and self.first_message_base_arrived==False and self.first_message_joints_arrived==False):
+        if(self.first_message_base_arrived==False and self.first_message_joints_arrived==False):
             return
 
         
         # Update the mujoco model
-        if(not USE_MUJOCO_SIMULATION):
-            self.env.mjData.qpos[0:3] = copy.deepcopy(self.position)
-            self.env.mjData.qpos[3:7] = copy.deepcopy(self.orientation)
-            self.env.mjData.qvel[0:3] = copy.deepcopy(self.linear_velocity)
-            self.env.mjData.qvel[3:6] = copy.deepcopy(self.angular_velocity)
-            self.env.mjData.qpos[7:] = copy.deepcopy(self.joint_positions)
-            self.env.mjData.qvel[6:] = copy.deepcopy(self.joint_velocities)
-            self.env.mjModel.opt.timestep = simulation_dt
-            self.env.mjModel.opt.disableflags = 16 # Disable the collision detection
-            mujoco.mj_forward(self.env.mjModel, self.env.mjData)   
-
-        # Publish some message for debugging purposes
-        if(USE_MUJOCO_SIMULATION):
-            base_state_msg = BaseStateMsg()
-            base_state_msg.position = self.env.base_pos.flatten().tolist()
-            #base_state_msg.orientation = self.env.base_ori_quat.flatten().tolist()
-            base_state_msg.linear_velocity = self.env.base_lin_vel(frame='world').flatten().tolist()
-            base_state_msg.angular_velocity = self.env.base_ang_vel(frame='base').flatten().tolist()
-            self.publisher_base_blind_state_debug.publish(base_state_msg)
-
-            blind_state_msg = BlindStateMsg()
-            blind_state_msg.joints_position = self.env.mjData.qpos[7:].flatten().tolist()
-            blind_state_msg.joints_velocity = self.env.mjData.qvel[6:].flatten().tolist()
-            self.publisher_blind_state_debug.publish(blind_state_msg)
+        self.env.mjData.qpos[0:3] = copy.deepcopy(self.position)
+        #self.env.mjData.qpos[0:2] = copy.deepcopy(self.position[0:2])
+        #self.env.mjData.qpos[2] = copy.deepcopy(self.wb_interface.terrain_computation.terrain_height) # Proprioceptive height estimation
+        self.env.mjData.qpos[3:7] = copy.deepcopy(self.orientation)
+        self.env.mjData.qvel[0:3] = copy.deepcopy(self.linear_velocity)
+        self.env.mjData.qvel[3:6] = copy.deepcopy(self.angular_velocity)
+        self.env.mjData.qpos[7:] = copy.deepcopy(self.joint_positions)
+        self.env.mjData.qvel[6:] = copy.deepcopy(self.joint_velocities)
+        self.env.mjModel.opt.timestep = simulation_dt
+        self.env.mjModel.opt.disableflags = 16 # Disable the collision detection
+        mujoco.mj_forward(self.env.mjModel, self.env.mjData)   
 
 
-
-        # Update value from SE or Simulator ----------------------
+        # And get the state of the robot
         legs_order = ["FL", "FR", "RL", "RR"]
         feet_pos = self.env.feet_pos(frame='world')
         feet_vel = self.env.feet_vel(frame='world')
@@ -352,7 +367,6 @@ class Quadruped_PyMPC_Node(Node):
         base_ori_euler_xyz = self.env.base_ori_euler_xyz
         base_pos = self.env.base_pos
         com_pos = self.env.com
-
 
 
         # Get the reference base velocity in the world frame
@@ -496,30 +510,22 @@ class Quadruped_PyMPC_Node(Node):
             self.tau[leg] = np.clip(self.tau[leg], tau_min, tau_max)
 
 
-        if USE_MUJOCO_SIMULATION:
-            action = np.zeros(self.env.mjModel.nu)
-            action[self.env.legs_tau_idx.FL] = self.tau.FL
-            action[self.env.legs_tau_idx.FR] = self.tau.FR
-            action[self.env.legs_tau_idx.RL] = self.tau.RL
-            action[self.env.legs_tau_idx.RR] = self.tau.RR
-            self.env.step(action=action)
-        
-
-
-        # Fix convention DLS2
-        self.tau.FL[0] = -self.tau.FL[0]
-        self.tau.RL[0] = -self.tau.RL[0]
+        if(USE_DLS_CONVENTION):
+            # Fix convention DLS2
+            self.tau.FL[0] = -self.tau.FL[0]
+            self.tau.RL[0] = -self.tau.RL[0]
 
         control_signal_msg = ControlSignalMsg()
         control_signal_msg.torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten()
         control_signal_msg.timestamp = self.loop_time #self.loop_time#self.last_mpc_loop_time
         self.publisher_control_signal.publish(control_signal_msg) 
 
-        # Fix convention DLS2 and send PD target
-        pd_target_joints_pos.FL[0] = -pd_target_joints_pos.FL[0]
-        pd_target_joints_pos.RL[0] = -pd_target_joints_pos.RL[0]
-        pd_target_joints_vel.FL[0] = -pd_target_joints_vel.FL[0]
-        pd_target_joints_vel.RL[0] = -pd_target_joints_vel.RL[0]  
+        if(USE_DLS_CONVENTION):
+            # Fix convention DLS2 and send PD target
+            pd_target_joints_pos.FL[0] = -pd_target_joints_pos.FL[0]
+            pd_target_joints_pos.RL[0] = -pd_target_joints_pos.RL[0]
+            pd_target_joints_vel.FL[0] = -pd_target_joints_vel.FL[0]
+            pd_target_joints_vel.RL[0] = -pd_target_joints_vel.RL[0]  
 
         trajectory_generator_msg = TrajectoryGeneratorMsg()
         trajectory_generator_msg.joints_position = np.concatenate([pd_target_joints_pos.FL, pd_target_joints_pos.FR, pd_target_joints_pos.RL, pd_target_joints_pos.RR], axis=0).flatten()
@@ -533,48 +539,10 @@ class Quadruped_PyMPC_Node(Node):
         trajectory_generator_msg.timestamp = self.last_mpc_loop_time
         self.publisher_trajectory_generator.publish(trajectory_generator_msg)
 
-        
-        
-        # Render the simulation -----------------------------------------------------------------------------------
-        if USE_MUJOCO_RENDER:
-            RENDER_FREQ = 30
-            # Render only at a certain frequency -----------------------------------------------------------------
-            if time.time() - self.last_render_time > 1.0 / RENDER_FREQ or self.env.step_num == 1:
-                _, _, feet_GRF = self.env.feet_contact_state(ground_reaction_forces=True)
-
-                # Plot the swing trajectory
-                self.feet_traj_geom_ids = plot_swing_mujoco(viewer=self.env.viewer,
-                                                        swing_traj_controller=self.wb_interface.stc,
-                                                        swing_period=self.wb_interface.stc.swing_period,
-                                                        swing_time=LegsAttr(FL=self.wb_interface.stc.swing_time[0],
-                                                                            FR=self.wb_interface.stc.swing_time[1],
-                                                                            RL=self.wb_interface.stc.swing_time[2],
-                                                                            RR=self.wb_interface.stc.swing_time[3]),
-                                                        lift_off_positions=self.wb_interface.frg.lift_off_positions,
-                                                        nmpc_footholds=self.nmpc_footholds,
-                                                        ref_feet_pos=LegsAttr(FL=ref_state['ref_foot_FL'].reshape(3,1),
-                                                                              FR=ref_state['ref_foot_FR'].reshape(3,1),
-                                                                              RL=ref_state['ref_foot_RL'].reshape(3,1),
-                                                                              RR=ref_state['ref_foot_RR'].reshape(3,1)),
-                                                        early_stance_detector=self.wb_interface.esd,
-                                                        geom_ids=self.feet_traj_geom_ids)
-                
-                
-                # Plot the GRF
-                for leg_id, leg_name in enumerate(legs_order):
-                    self.feet_GRF_geom_ids[leg_name] = render_vector(self.env.viewer,
-                                                                vector=feet_GRF[leg_name],
-                                                                pos=feet_pos[leg_name],
-                                                                scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
-                                                                color=np.array([0, 1, 0, .5]),
-                                                                geom_id=self.feet_GRF_geom_ids[leg_name])
-
-                self.env.render()
-                self.last_render_time = time.time()
 
 
 def main():
-    print('Hello from quadruped_pympc_ros_interface.')
+    print('Hello from Quadruped-PyMPC ros interface.')
     rclpy.init()
 
     controller_node = Quadruped_PyMPC_Node()

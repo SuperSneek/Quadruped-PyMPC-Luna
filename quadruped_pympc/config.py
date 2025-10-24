@@ -41,8 +41,14 @@ elif (robot == 'b2'):
                         [-0.021400468992761768, 0.0004641447134275615, 1.503217877350808]])
 
 
-elif (robot == 'hyqreal'):
+elif (robot == 'hyqreal1'):
     mass = 108.40
+    inertia = np.array([[4.55031444e+00, 2.75249434e-03, -5.11957307e-01],
+                        [2.75249434e-03, 2.02411774e+01, -7.38560592e-04],
+                        [-5.11957307e-01, -7.38560592e-04, 2.14269772e+01]])
+    
+elif (robot == 'hyqreal2'):
+    mass = 126.69
     inertia = np.array([[4.55031444e+00, 2.75249434e-03, -5.11957307e-01],
                         [2.75249434e-03, 2.02411774e+01, -7.38560592e-04],
                         [-5.11957307e-01, -7.38560592e-04, 2.14269772e+01]])
@@ -210,6 +216,7 @@ simulation_params = {
 
     # This is used to activate or deactivate the reflexes upon contact detection
     'reflex_trigger_mode':       'tracking', # 'tracking', 'geom_contact', False
+    'reflex_max_step_height':    0.5 * hip_height,  # this is the maximum step height that the robot can do if reflexes are enabled
     'reflex_next_steps_height_enhancement': False,
     'velocity_modulator': True,
 

@@ -28,6 +28,8 @@ class SwingTrajectoryController:
         self.use_feedback_linearization = True
         self.use_friction_compensation = True
 
+        self.rising_edge_detected = False
+
     def regenerate_swing_trajectory_generator(self, step_height: float, swing_period: float) -> None:
         if self.generator == "scipy":
             from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
@@ -83,9 +85,7 @@ class SwingTrajectoryController:
         tau_swing = J.T @ (self.position_gain_fb * (err_pos) + self.velocity_gain_fb * (err_vel))
         if self.use_feedback_linearization:
             tau_swing += mass_matrix @ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
-        
-        if self.use_friction_compensation:
-            tau_swing -= passive_force
+    
 
         return tau_swing, des_foot_pos, des_foot_vel
 
@@ -111,9 +111,6 @@ class SwingTrajectoryController:
                 + legs_qfrc_bias
             )
         
-        if self.use_friction_compensation:
-            tau_swing -= legs_qfrc_passive
-
         return tau_swing, None, None
 
     def update_swing_time(self, current_contact, legs_order, dt):
@@ -126,15 +123,15 @@ class SwingTrajectoryController:
                 self.swing_time[leg_id] = 0
 
     def check_apex_condition(self, current_contact, interval=0.02):
-        optimize_swing = 0
+        apex = 0
         for leg_id in range(4):
             # Swing time check
             if current_contact[leg_id] == 0:
                 if (self.swing_time[leg_id] > (self.swing_period / 2.0) - interval) and (
                     self.swing_time[leg_id] < (self.swing_period / 2.0) + interval
                 ):
-                    optimize_swing = 1
-        return optimize_swing
+                    apex = 1
+        return apex
 
     def check_full_stance_condition(self, current_contact):
         stance = 1
@@ -144,6 +141,24 @@ class SwingTrajectoryController:
                 stance = 0
         return stance
 
+    def check_touch_down_condition(self, current_contact, previous_contact, contact_sequence, lookahead=3):
+        """
+        Detect when all feet have just made contact with the ground (rising edge).
+        Uses a lookahead mechanism to ensure stability and avoid transient states.
+        """
+        # Rising edge detection (transition from at least one foot in swing to all feet in stance)
+        if np.all(current_contact == 1) and not np.all(previous_contact == 1):
+            self.rising_edge_detected = True
+
+        # Wait until first "n lookahead" columns in contact sequence are all in stance contact
+        stable_stance = np.all(contact_sequence[:, 0:lookahead] == 1)
+        next_leg_lift = not np.all(contact_sequence[:, lookahead] == 1)
+
+        if self.rising_edge_detected and stable_stance and next_leg_lift:
+            self.rising_edge_detected = False
+            return 1 # Signal to trigger optimization
+        else:
+            return 0
 
 # Example:
 if __name__ == "__main__":

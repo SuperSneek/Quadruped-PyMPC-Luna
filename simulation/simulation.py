@@ -91,27 +91,27 @@ def run_simulation(
     if qpympc_cfg.simulation_params["visual_foothold_adaptation"] != "blind":
         from gym_quadruped.sensors.heightmap import HeightMap
 
-        resolution_vfa = 0.04
-        dimension_vfa = 7
+        resolution_heightmap = 0.04
+        num_rows_heightmap = 7
+        num_cols_heightmap = 7
         heightmaps = LegsAttr(
-            FL=HeightMap(
-                n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mj_model=env.mjModel, mj_data=env.mjData
-            ),
-            FR=HeightMap(
-                n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mj_model=env.mjModel, mj_data=env.mjData
-            ),
-            RL=HeightMap(
-                n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mj_model=env.mjModel, mj_data=env.mjData
-            ),
-            RR=HeightMap(
-                n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mj_model=env.mjModel, mj_data=env.mjData
-            ),
+            FL=HeightMap(num_rows=num_rows_heightmap, num_cols=num_cols_heightmap, 
+                         dist_x=resolution_heightmap, dist_y=resolution_heightmap, 
+                         mj_model=env.mjModel, mj_data=env.mjData),
+            FR=HeightMap(num_rows=num_rows_heightmap, num_cols=num_cols_heightmap, 
+                         dist_x=resolution_heightmap, dist_y=resolution_heightmap, 
+                         mj_model=env.mjModel, mj_data=env.mjData),
+            RL=HeightMap(num_rows=num_rows_heightmap, num_cols=num_cols_heightmap, 
+                         dist_x=resolution_heightmap, dist_y=resolution_heightmap, 
+                         mj_model=env.mjModel, mj_data=env.mjData),
+            RR=HeightMap(num_rows=num_rows_heightmap, num_cols=num_cols_heightmap, 
+                         dist_x=resolution_heightmap, dist_y=resolution_heightmap, 
+                         mj_model=env.mjModel, mj_data=env.mjData),
         )
     else:
         heightmaps = None
 
     # Quadruped PyMPC controller initialization -------------------------------------------------------------
-    # mpc_frequency = qpympc_cfg.simulation_params["mpc_frequency"]
     quadrupedpympc_observables_names = (
         "ref_base_height",
         "ref_base_angles",
@@ -241,8 +241,6 @@ def run_simulation(
             action[env.legs_tau_idx.RL] = tau.RL
             action[env.legs_tau_idx.RR] = tau.RR
 
-            # action_noise = np.random.normal(0, 2, size=env.mjModel.nu)
-            # action += action_noise
 
             # Apply the action to the environment and evolve sim --------------------------------------------------
             state, reward, is_terminated, is_truncated, info = env.step(action=action)
