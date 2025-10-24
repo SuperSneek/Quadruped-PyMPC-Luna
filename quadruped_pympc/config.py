@@ -195,8 +195,8 @@ simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit'
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
-    'impedence_joint_position_gain':  10.0,
-    'impedence_joint_velocity_gain':  2.0,
+    'impedence_joint_position_gain':  1.0,
+    'impedence_joint_velocity_gain':  0.1,
 
     'step_height':                 0.2 * hip_height,  
 
