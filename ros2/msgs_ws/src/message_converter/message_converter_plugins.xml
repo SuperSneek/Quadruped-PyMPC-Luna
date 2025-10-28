@@ -1,0 +1,8 @@
+<library path="message_converter_plugins">
+
+    <class type="message_converter_plugins::BlindStateConverterPlugin" base_class_type="message_converter_plugins::ConverterBase">
+        <description>A plugin to estimate the attitude</description>
+    </class>
+
+
+</library>
