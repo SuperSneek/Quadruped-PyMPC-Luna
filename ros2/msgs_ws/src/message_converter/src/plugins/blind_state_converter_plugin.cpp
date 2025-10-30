@@ -45,23 +45,40 @@ namespace message_converter
             RCLCPP_INFO(node_->get_logger(), "Synchronized JointState and ContactDetection received.");
 
             // publishing
-			      msg_.timestamp = node_->get_clock()->now();
-			      msg_.frame_id = "base_link";
-            //joint state values
-            msg_.joints_name = joint_state->name;
-            msg_.joints_position = joint_state->position;
-            msg_.joints_velocity = joint_state->velocity;
-            msg_.joints_effort = joint_state->effort;
+            //msg_.timestamp = node_->get_clock()->now();
+            msg_.frame_id = "base_link";
+            
+            //joint state values - convert vectors to arrays
+            // Copy joint names (vector<string> to array<string, 12>)
+            std::copy_n(joint_state->name.begin(), 
+                        std::min(joint_state->name.size(), msg_.joints_name.size()), 
+                        msg_.joints_name.begin());
+            
+            // Copy positions (vector<double> to array<double, 12>)
+            std::copy_n(joint_state->position.begin(), 
+                        std::min(joint_state->position.size(), msg_.joints_position.size()), 
+                        msg_.joints_position.begin());
+            
+            // Copy velocities (vector<double> to array<double, 12>)
+            std::copy_n(joint_state->velocity.begin(), 
+                        std::min(joint_state->velocity.size(), msg_.joints_velocity.size()), 
+                        msg_.joints_velocity.begin());
+            
+            // Copy efforts (vector<double> to array<double, 12>)
+            std::copy_n(joint_state->effort.begin(), 
+                        std::min(joint_state->effort.size(), msg_.joints_effort.size()), 
+                        msg_.joints_effort.begin());
+            
             //TODO: Calculate acceleration? Set to 0 for now
+            msg_.joints_acceleration.fill(0.0);
+            
             //TODO: Only use temperature if necessary
-            //TODO see if this is even used (doesnt seem like it)
-            //msg_.feet_contact = contact->
+            msg_.joints_temperature.fill(0.0);
+            
+            // Copy contact state (assuming contact has a boolean array/vector)
+            // msg_.feet_contact = ...
 
             blind_state_pub_->publish(msg_);
-
-
-
-
         }
 
     protected:
