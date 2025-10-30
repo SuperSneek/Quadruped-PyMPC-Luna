@@ -1,7 +1,7 @@
 <library path="message_converter_plugins">
 
-    <class type="message_converter::BlindStateConverterPlugin" base_class_type="message_converter::ConverterBase">
-        <description>A plugin to estimate the attitude</description>
+    <class type="message_converter::BlindStateConverter" base_class_type="message_converter::PluginBase">
+        <description>A converter that aggregates odometry, joint states and legodometry to produce state estimation</description>
     </class>
 
 

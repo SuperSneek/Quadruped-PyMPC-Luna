@@ -24,22 +24,34 @@ namespace message_converter
           return std::string("A converter that aggregates odometry, joint states and legodometry to produce state estimation");
         }
 
-
+    protected:
         void initialize_() override
         {
-            node_ = std::move(node_);
             RCLCPP_INFO(node_->get_logger(), "Blind State Converter initialized.");
+            // TODO: Add subscriptions, publishers, timers here
         }
 
-        void shutdown_() override { }
-		void pause_() override { }
-		void resume_() override { }
-		void reset_() override { }
+        void shutdown_() override
+        {
+            RCLCPP_INFO(node_->get_logger(), "Blind State Converter shutdown.");
+        }
+
+		void pause_() override
+        {
+            RCLCPP_INFO(node_->get_logger(), "Blind State Converter paused.");
+        }
+
+		void resume_() override
+        {
+            RCLCPP_INFO(node_->get_logger(), "Blind State Converter resumed.");
+        }
+
+		void reset_() override
+        {
+            RCLCPP_INFO(node_->get_logger(), "Blind State Converter reset.");
+        }
 
     private:
-    	bool paused_;
-    	bool running_;
-    	bool initialized_;
   };
 }
 

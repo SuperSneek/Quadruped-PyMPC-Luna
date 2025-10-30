@@ -27,7 +27,7 @@ namespace message_converter
   }
 
   message_converter_node::message_converter_node(rclcpp::Node::SharedPtr node)
-      : node_(std::move(node)), plugin_loader("message_converter", "message_converter_plugins::PluginBase") {
+      : node_(std::move(node)), plugin_loader("message_converter", "message_converter::PluginBase") {
 
       for (auto &name : plugin_loader.getDeclaredClasses()) {
           add_plugin(name);
