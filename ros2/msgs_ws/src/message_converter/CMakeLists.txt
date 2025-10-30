@@ -26,6 +26,11 @@ target_link_libraries(message_converter_node PUBLIC
   rclcpp::rclcpp
   pluginlib::pluginlib
 )
+target_include_directories(message_converter_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
 
 #define plugin
 add_library(message_converter_plugins SHARED src/plugins/blind_state_converter_plugin.cpp)
@@ -39,7 +44,7 @@ target_link_libraries(message_converter_plugins PUBLIC
   rclcpp::rclcpp
   pluginlib::pluginlib
 )
-pluginlib_export_plugin_description_file(message_converter_plugins message_converter_plugins.xml)
+pluginlib_export_plugin_description_file(message_converter message_converter_plugins.xml)
 
 
 install(

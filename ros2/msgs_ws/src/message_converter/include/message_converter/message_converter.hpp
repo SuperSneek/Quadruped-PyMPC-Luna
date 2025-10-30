@@ -23,7 +23,7 @@
 #include <stdexcept>
 
 
-#include "message_converter/converter_base.hpp"
+#include "converter_base.hpp"
 
 
 
@@ -41,9 +41,8 @@ public:
 
 protected:
     rclcpp::Node::SharedPtr node_;
-    std::shared_ptr<Robot> robot;
-    pluginlib::ClassLoader<message_converter_plugins::PluginBase> plugin_loader;
-    std::vector<std::shared_ptr<message_converter_plugins::PluginBase>> loaded_plugins;
+    pluginlib::ClassLoader<message_converter::PluginBase> plugin_loader;
+    std::vector<std::shared_ptr<message_converter::PluginBase>> loaded_plugins;
     // ROS2 services to be added during migration
 
 
@@ -54,8 +53,6 @@ protected:
     bool pattern_match(std::string &pattern, std::string &pl_name);
     inline bool getWhitelist(std::vector<std::string> &whitelist);
     inline bool getBlacklist(std::vector<std::string> &blacklist);
-    // TODO: port ROS1 services to ROS2
-
 };
 
 

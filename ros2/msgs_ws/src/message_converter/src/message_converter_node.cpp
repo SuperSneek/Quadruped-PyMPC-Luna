@@ -28,24 +28,19 @@ namespace message_converter
 
   message_converter_node::message_converter_node(rclcpp::Node::SharedPtr node)
       : node_(std::move(node)), plugin_loader("message_converter", "message_converter_plugins::PluginBase") {
-      // Load blacklist/whitelist parameters
-      std::vector<std::string> blacklist{};
-      std::vector<std::string> whitelist{};
-
-      if (blacklist.empty() && !whitelist.empty()) {
-          blacklist.emplace_back("*");
-      }
 
       for (auto &name : plugin_loader.getDeclaredClasses()) {
           add_plugin(name);
       }
+
+      RCLCPP_INFO(node_->get_logger(), "Message converter node initialized.");
   }
 
   bool message_converter_node::add_plugin(std::string &pl_name) {
     try {
         auto plugin = plugin_loader.createSharedInstance(pl_name);
         RCLCPP_INFO(node_->get_logger(), "Plugin %s loaded", pl_name.c_str());
-        plugin->initialize(node_, nullptr);
+        plugin->initialize(node_);
         RCLCPP_INFO(node_->get_logger(), "Plugin %s initialized", pl_name.c_str());
         loaded_plugins.push_back(plugin);
         return true;
