@@ -88,8 +88,7 @@ using ExactTimePolicy = message_filters::sync_policies::ExactTime<Odom, IMU>;
             // declare parameters with sensible defaults and read their values
             auto odom_topic = node_->declare_parameter<std::string>("odom_topic", "/odom");
             auto imu_topic = node_->declare_parameter<std::string>("imu_topic", "/imu");
-            auto pub_topic = node_->declare_parameter<std::string>("pub_topic", "/base_state_topic");
-            auto sync_tolerance_ms = node_->declare_parameter<int>("sync_tolerance_ms", 50);
+            auto pub_topic = node_->declare_parameter<std::string>("base_pub_topic", "/base_state_topic");
 
             //Subscribers
             auto qos = rclcpp::SensorDataQoS();
@@ -100,7 +99,6 @@ using ExactTimePolicy = message_filters::sync_policies::ExactTime<Odom, IMU>;
             //Synchronizer
             sync_ =  std::make_shared<message_filters::Synchronizer<MySyncPolicy>>(
                 MySyncPolicy(10), *joint_state_sub_, *contact_sub_);
-            sync_->setMaxIntervalDuration(rclcpp::Duration::from_seconds(sync_tolerance_ms / 1000.0));
             sync_->registerCallback(
                 std::bind(&BaseStateConverter::syncCallback, this, std::placeholders::_1, std::placeholders::_2));
 
