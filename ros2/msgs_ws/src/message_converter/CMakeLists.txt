@@ -14,10 +14,9 @@ find_package(state_estimator_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(Eigen3 REQUIRED)
 find_package(rosbag2_transport REQUIRED)
 find_package(message_filters REQUIRED)
-find_package(pinocchio REQUIRED)
+find_package(dls2_msgs REQUIRED)
 
 add_executable(message_converter_node src/message_converter_node.cpp)
 
@@ -41,12 +40,16 @@ target_include_directories(message_converter_plugins PUBLIC
   ${pluginlib_INCLUDE_DIRS}
   ${state_estimator_msgs_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
-  ${message_filters_INCLUDE_DIRS})
+  ${message_filters_INCLUDE_DIRS}
+  ${dls2_msgs_INCLUDE_DIRS})
 
 target_link_libraries(message_converter_plugins PUBLIC
   rclcpp::rclcpp
   pluginlib::pluginlib
   ${sensor_msgs_TARGETS}
+  ${state_estimator_msgs_TARGETS}
+  ${dls2_msgs_TARGETS}
+  message_filters::message_filters
 )
 pluginlib_export_plugin_description_file(message_converter message_converter_plugins.xml)
 
@@ -71,6 +74,12 @@ install(
 install(FILES
   message_converter_plugins.xml
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  launch
+  config
+  DESTINATION share/${PROJECT_NAME}/
 )
 
 ament_export_include_directories(
