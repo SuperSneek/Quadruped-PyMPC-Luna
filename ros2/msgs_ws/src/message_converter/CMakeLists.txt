@@ -32,7 +32,9 @@ target_include_directories(message_converter_node PUBLIC
 
 
 #define plugin
-add_library(message_converter_plugins SHARED src/plugins/blind_state_converter_plugin.cpp)
+add_library(message_converter_plugins SHARED
+ src/plugins/blind_state_converter_plugin.cpp
+ src/plugins/base_state_converter_plugin.cpp)
 target_include_directories(message_converter_plugins PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -41,7 +43,9 @@ target_include_directories(message_converter_plugins PUBLIC
   ${state_estimator_msgs_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
   ${message_filters_INCLUDE_DIRS}
-  ${dls2_msgs_INCLUDE_DIRS})
+  ${dls2_msgs_INCLUDE_DIRS}
+  ${geometry_msgs_INCLUDE_DIRS}
+  ${nav_msgs_INCLUDE_DIRS})
 
 target_link_libraries(message_converter_plugins PUBLIC
   rclcpp::rclcpp
@@ -49,7 +53,9 @@ target_link_libraries(message_converter_plugins PUBLIC
   ${sensor_msgs_TARGETS}
   ${state_estimator_msgs_TARGETS}
   ${dls2_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
   message_filters::message_filters
+  ${nav_msgs_TARGETS}
 )
 pluginlib_export_plugin_description_file(message_converter message_converter_plugins.xml)
 

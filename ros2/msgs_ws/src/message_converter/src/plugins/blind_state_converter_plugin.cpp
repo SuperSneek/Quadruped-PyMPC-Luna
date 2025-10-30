@@ -42,11 +42,13 @@ namespace message_converter
 
         void syncCallback(const JointState::ConstSharedPtr &joint_state, const Contact::ConstSharedPtr &contact)
         {
-            RCLCPP_INFO(node_->get_logger(), "Synchronized JointState and ContactDetection received.");
 
-            // publishing
-            //msg_.timestamp = node_->get_clock()->now();
-            msg_.frame_id = "base_link";
+
+            //Set float timestamp
+            msg_.timestamp = joint_state->header.stamp.sec + joint_state->header.stamp.nanosec * 1e-9;
+            //set frame ID
+            msg_.frame_id = joint_state->header.frame_id;
+
             
             //joint state values - convert vectors to arrays
             // Copy joint names (vector<string> to array<string, 12>)

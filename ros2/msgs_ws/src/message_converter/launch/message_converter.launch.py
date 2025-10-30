@@ -12,7 +12,10 @@ def generate_launch_description():
 
     # Configuration file path
     blind_state_config_path = os.path.join(
-        pkg_dir, 'config', 'contact_plugin.yaml'
+        pkg_dir, 'config', 'blind_state_converter_plugin.yaml'
+    )
+    base_state_config_path = os.path.join(
+        pkg_dir, 'config', 'base_state_converter_plugin.yaml'
     )
 
     # Create the node with configuration
@@ -23,6 +26,7 @@ def generate_launch_description():
         output='screen',
         parameters=[
             blind_state_config_path,
+            base_state_config_path,
             {'use_sim_time': True}
         ]
     )

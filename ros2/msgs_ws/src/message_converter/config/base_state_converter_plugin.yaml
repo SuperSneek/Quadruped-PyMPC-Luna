@@ -1,0 +1,6 @@
+message_converter:
+  ros__parameters:
+    odom_topic: "/odom"
+    imu_topic: "/imu"
+    pub_topic: "/base_state_topic"
+    sync_tolerance_ms: 200
