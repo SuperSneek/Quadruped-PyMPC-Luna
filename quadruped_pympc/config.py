@@ -60,7 +60,7 @@ elif (robot == 'mini_cheetah'):
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     
 elif robot == 'luna':
-    mass = 10
+    mass = 11
     inertia = np.array([[1.08460467e-01, 1.21660000e-04, -1.55444692e-02],
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 2.24474661e-01]])
@@ -92,8 +92,8 @@ mpc_params = {
     'mu':                                      0.5,
 
     # this is used to have a smaller dt near the start of the horizon
-    'use_nonuniform_discretization':           True,
-    'horizon_fine_grained':                    3,
+    'use_nonuniform_discretization':           False,
+    'horizon_fine_grained':                    2,
     'dt_fine_grained':                         0.01,
 
     # if this is true, we optimize the step frequency as well
@@ -108,7 +108,7 @@ mpc_params = {
     'use_warm_start':                          False,
 
     # this enables integrators for height, linear velocities, roll and pitch
-    'use_integrators':                         True,
+    'use_integrators':                         False,
     'alpha_integrator':                        0.1,
     'integrator_cap':                          [0.5, 0.2, 0.2, 0.0, 0.0, 1.0],
 
@@ -148,7 +148,7 @@ mpc_params = {
 
     # ONLY ONE CAN BE TRUE AT A TIME (only gradient)
     'use_static_stability':                    False,
-    'use_zmp_stability':                       True,
+    'use_zmp_stability':                       False,
     'trot_stability_margin':                   0.04,
     'pace_stability_margin':                   0.1,
     'crawl_stability_margin':                  0.04,  # in general, 0.02 is a good value
@@ -179,7 +179,7 @@ mpc_params = {
     'control_parametrization':                 'cubic_spline', # 'cubic_spline', 'linear_spline', 'zero_order'
     'num_splines':                             2,  # number of splines to use for the control parametrization
     'num_parallel_computations':               10000,  # More is better, but slower computation!
-    'num_sampling_iterations':                 7,  # More is better, but slower computation!
+    'num_sampling_iterations':                 1,  # More is better, but slower computation!
     'device':                                  'gpu',  # 'gpu', 'cpu'
     # convariances for the sampling methods
     'sigma_cem_mppi':                          3,
@@ -195,8 +195,8 @@ simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit'
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
-    'impedence_joint_position_gain':  1.0,
-    'impedence_joint_velocity_gain':  0.1,
+    'impedence_joint_position_gain':  10.0,
+    'impedence_joint_velocity_gain':  2.0,
 
     'step_height':                 0.2 * hip_height,  
 
@@ -235,3 +235,4 @@ simulation_params = {
     'scene':                       'flat',  # flat, random_boxes, random_pyramids, perlin
 
     }
+# -----------------------------------------------------------------------
