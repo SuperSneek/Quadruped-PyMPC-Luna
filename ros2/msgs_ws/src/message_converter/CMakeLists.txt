@@ -39,10 +39,14 @@ target_include_directories(message_converter_plugins PUBLIC
   $<INSTALL_INTERFACE:include>
   ${rclcpp_INCLUDE_DIRS}
   ${pluginlib_INCLUDE_DIRS}
-)
+  ${state_estimator_msgs_INCLUDE_DIRS}
+  ${sensor_msgs_INCLUDE_DIRS}
+  ${message_filters_INCLUDE_DIRS})
+
 target_link_libraries(message_converter_plugins PUBLIC
   rclcpp::rclcpp
   pluginlib::pluginlib
+  ${sensor_msgs_TARGETS}
 )
 pluginlib_export_plugin_description_file(message_converter message_converter_plugins.xml)
 

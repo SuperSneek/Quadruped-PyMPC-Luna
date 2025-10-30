@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    blind_state_converter_plugin:
+      plugin: "BlindStateConverterPlugin"
+      # Subscriber and Publisher topic names
+      contactdetection_topic: "/visual/FL_foot_contact/the_force" # Unitree: "/visual/FL_foot_contact/the_force" # ANYmal "/state_estimator/contact_force_lf_foot"
+      joint_states_topic: "/visual/FR_foot_contact/the_force" # Unitree: "/visual/FR_foot_contact/the_force" # ANYmal "/state_estimator/contact_force_rf_foot"
+      pub_topic: "blind_state"
