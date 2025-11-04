@@ -8,6 +8,8 @@ from dls2_msgs.msg import (
 )
 from std_msgs.msg import Float64MultiArray
 from sensor_msgs.msg import Joy
+from control_msgs.msg import MultiDOFCommand
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 import time
 import numpy as np
@@ -59,7 +61,7 @@ USE_DLS_CONVENTION = False
 
 USE_THREADED_MPC = False
 USE_PROCESS_MPC = False
-MPC_FREQ = 100
+MPC_FREQ = 400
 
 USE_SCHEDULER = False  # This enable a call to the run function every tot seconds, instead of as fast as possible
 SCHEDULER_FREQ = 250  # this is only valid if USE_SCHEDULER is True
@@ -101,6 +103,9 @@ class Quadruped_PyMPC_Node(Node):
         )
         self.publisher_trajectory_generator = self.create_publisher(
             TrajectoryGeneratorMsg, "dls2/trajectory_generator", 1
+        )
+        self.publisher_joint_trajectory = self.create_publisher(
+            MultiDOFCommand, "pid_controller/reference", 1
         )
         if USE_SCHEDULER:
             self.timer = self.create_timer(
@@ -642,6 +647,21 @@ class Quadruped_PyMPC_Node(Node):
         trajectory_generator_msg.kd = self.impedence_joint_velocity_gain
         trajectory_generator_msg.timestamp = self.last_mpc_loop_time
         self.publisher_trajectory_generator.publish(trajectory_generator_msg)
+
+        # Publish JointTrajectory message for ROS2 trajectory controller
+        joint_trajectory_msg = MultiDOFCommand()
+        
+        # Define joint names in the order they appear in your robot
+        joint_trajectory_msg.dof_names = [
+            "FL_shoulder_joint", "FL_thigh_joint", "FL_calf_joint",
+            "FR_shoulder_joint", "FR_thigh_joint", "FR_calf_joint",
+            "BL_shoulder_joint", "BL_thigh_joint", "BL_calf_joint",
+            "BR_shoulder_joint", "BR_thigh_joint", "BR_calf_joint"
+        ]
+        
+        joint_trajectory_msg.values = trajectory_generator_msg.joints_position.tolist()
+        
+        self.publisher_joint_trajectory.publish(joint_trajectory_msg)
 
 
 def main():
