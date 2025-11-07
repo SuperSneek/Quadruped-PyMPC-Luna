@@ -609,7 +609,7 @@ class Quadruped_PyMPC_Node(Node):
         self.publisher_control_signal.publish(control_signal_msg)
         effort_msg = Float64MultiArray()
         effort_msg.data = np.concatenate(
-            [self.tau.FL, self.tau.RL, self.tau.FR, self.tau.RR], axis=0
+            [self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0
         ).flatten()
         self.publisher_effors.publish(effort_msg)
 
