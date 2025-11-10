@@ -1,0 +1,11 @@
+<library path="message_converter_plugins">
+
+    <class type="message_converter::BlindStateConverter" base_class_type="message_converter::PluginBase">
+        <description>This plugin packages contact data and joint state data for a blind state message</description>
+    </class>
+    <class type="message_converter::BaseStateConverter" base_class_type="message_converter::PluginBase">
+        <description>This basically creates an overfilled odom message for the MPC</description>
+    </class>
+
+
+</library>
