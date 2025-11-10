@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'luna'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah', 'luna'  # TODO: Load from robot_descriptions.py
+robot = 'go2'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah', 'luna'  # TODO: Load from robot_descriptions.py
 
 from gym_quadruped.robot_cfgs import RobotConfig, get_robot_config
 robot_cfg: RobotConfig = get_robot_config(robot_name=robot)
@@ -60,11 +60,10 @@ elif (robot == 'mini_cheetah'):
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     
 elif robot == 'luna':
-    mass = 11
-    inertia = np.array([[1.08460467e-01, 1.21660000e-04, -1.55444692e-02],
-                        [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
-                        [-1.55444692e-02, -3.12000000e-05, 2.24474661e-01]])
-
+    mass = 9
+    inertia = np.array([[0.0479553952442776, 0,0],
+                        [0, 0.0523691518925125, 0],
+                        [0, 0, 0.0662836066725710]])
 
 gravity_constant = 9.81 # Exposed in case of different gravity conditions
 # ----------------------------------------------------------------------------------------------------------------
@@ -204,7 +203,7 @@ simulation_params = {
     "visual_foothold_adaptation":  'blind', #'blind', 'height', 'vfa'
 
     # this is the integration time used in the simulator
-    'dt':                          0.002,
+    'dt':                          0.005,
 
     'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},

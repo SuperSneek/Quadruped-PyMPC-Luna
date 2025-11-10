@@ -30,7 +30,7 @@ import os
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 USE_SCHEDULER = True # Use the scheduler to compute the control signal
-SCHEDULER_FREQ = 500 # Frequency of the scheduler
+SCHEDULER_FREQ = 200 # Frequency of the scheduler
 RENDER_FREQ = 30
 
 # Shell for the controllers ----------------------------------------------

@@ -57,25 +57,21 @@ os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
 # for real time, launch it with chrt -r 99 python3 run_controller.py
 
 
+
 USE_DLS_CONVENTION = False
 
 USE_THREADED_MPC = False
 USE_PROCESS_MPC = False
-MPC_FREQ = 400
+MPC_FREQ = 100 
 
-USE_SCHEDULER = False  # This enable a call to the run function every tot seconds, instead of as fast as possible
-SCHEDULER_FREQ = 250  # this is only valid if USE_SCHEDULER is True
+USE_SCHEDULER = False # This enable a call to the run function every tot seconds, instead of as fast as possible
+SCHEDULER_FREQ = 250 # this is only valid if USE_SCHEDULER is True
 
-USE_FIXED_LOOP_TIME = (
-    False  # This is used to fix the clock time of periodic gait gen to 1/SCHEDULER_FREQ
-)
-USE_SATURATED_LOOP_TIME = (
-    True  # This is used to cap the clock time of periodic gait gen to max 250Hz
-)
+USE_FIXED_LOOP_TIME = False # This is used to fix the clock time of periodic gait gen to 1/SCHEDULER_FREQ
+USE_SATURATED_LOOP_TIME = True # This is used to cap the clock time of periodic gait gen to max 250Hz
 
 USE_SMOOTH_VELOCITY = False
 USE_SMOOTH_HEIGHT = True
-
 
 # Shell for the controllers ----------------------------------------------
 class Quadruped_PyMPC_Node(Node):
@@ -153,7 +149,7 @@ class Quadruped_PyMPC_Node(Node):
         )
         self.legs_order = ["FL", "FR", "RL", "RR"]
         self.env.reset(random=False)
-        self.last_mpc_time = time.time()
+        self.last_mpc_time = self.get_clock().now().nanoseconds / 1e9
 
         # Quadruped PyMPC controller initialization -------------------------------------------------------------
         from quadruped_pympc.interfaces.srbd_controller_interface import (
@@ -214,6 +210,9 @@ class Quadruped_PyMPC_Node(Node):
         # Let's start in FULL STANCE in any case
         self.wb_interface.pgg.gait_type = 7
 
+        # Initialize ROS2 clock for timing
+        self.clock = self.get_clock()
+
         # Threaded MPC
         if USE_THREADED_MPC:
             thread_mpc = threading.Thread(target=self.compute_mpc_thread_callback)
@@ -245,9 +244,9 @@ class Quadruped_PyMPC_Node(Node):
 
     def compute_mpc_thread_callback(self):
         # This thread runs forever!
-        last_mpc_thread_time = time.time()
+        last_mpc_thread_time = self.get_clock().now().nanoseconds / 1e9
         while True:
-            if time.time() - last_mpc_thread_time > 1.0 / MPC_FREQ:
+            if self.get_clock().now().nanoseconds / 1e9 - last_mpc_thread_time > 1.0 / MPC_FREQ:
                 if self.state_current is not None:
                     (
                         self.nmpc_GRFs,
@@ -274,7 +273,7 @@ class Quadruped_PyMPC_Node(Node):
                         # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
                         # this helps to minize the delay between new state->control in a real case scenario.
                         self.srbd_controller_interface.compute_RTI()
-                    last_mpc_thread_time = time.time()
+                    last_mpc_thread_time = self.get_clock().now().nanoseconds / 1e9
 
     def compute_mpc_process_callback(self, input_data_process, output_data_process):
         pid = os.getpid()
@@ -405,7 +404,7 @@ class Quadruped_PyMPC_Node(Node):
         if USE_FIXED_LOOP_TIME:
             simulation_dt = 1.0 / SCHEDULER_FREQ
         else:
-            start_time = time.perf_counter()
+            start_time = self.get_clock().now().nanoseconds / 1e9
             if self.last_start_time is not None:
                 self.loop_time = start_time - self.last_start_time
             self.last_start_time = start_time
@@ -536,7 +535,7 @@ class Quadruped_PyMPC_Node(Node):
                 self.last_mpc_loop_time = data[7]
 
         else:
-            if time.time() - self.last_mpc_time > 1.0 / MPC_FREQ:
+            if self.get_clock().now().nanoseconds / 1e9 - self.last_mpc_time > 1.0 / MPC_FREQ:
                 (
                     self.nmpc_GRFs,
                     self.nmpc_footholds,
@@ -560,7 +559,7 @@ class Quadruped_PyMPC_Node(Node):
                     # this helps to minize the delay between new state->control in a real case scenario.
                     self.srbd_controller_interface.compute_RTI()
 
-                self.last_mpc_time = time.time()
+                self.last_mpc_time = self.get_clock().now().nanoseconds / 1e9
 
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         self.tau, pd_target_joints_pos, pd_target_joints_vel = (
