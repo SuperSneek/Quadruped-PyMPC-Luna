@@ -81,7 +81,10 @@ namespace message_converter
             msg_.joints_temperature.fill(0.0);
             
             // Copy contact state (assuming contact has a boolean array/vector)
-            // msg_.feet_contact = ...
+            msg_.feet_contact = {static_cast<double>(contact->stance_rf), 
+                                 static_cast<double>(contact->stance_lf), 
+                                 static_cast<double>(contact->stance_rh), 
+                                 static_cast<double>(contact->stance_lh)};
 
             blind_state_pub_->publish(msg_);
         }

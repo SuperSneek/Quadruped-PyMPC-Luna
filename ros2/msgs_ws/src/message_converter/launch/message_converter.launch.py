@@ -28,7 +28,11 @@ def generate_launch_description():
             blind_state_config_path,
             base_state_config_path,
             {'use_sim_time': True}
-        ]
+        ],
+        #remappings=[
+        #    ('/dls2/base_state', '/debug/base_state'),
+        #    ('/dls2/blind_state', '/debug/blind_state')
+        #]
     )
     
     return LaunchDescription([node])
