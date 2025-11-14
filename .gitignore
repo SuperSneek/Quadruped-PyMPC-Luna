@@ -5,6 +5,7 @@
 ./jnrh2023/
 c_generated_code
 *.json
+rosbags/
 core.*
 ### C ###
 # Prerequisites

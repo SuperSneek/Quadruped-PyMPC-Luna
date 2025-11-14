@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import rclpy
 from rclpy.node import Node
 from dls2_msgs.msg import (
@@ -7,6 +8,11 @@ from dls2_msgs.msg import (
     TrajectoryGeneratorMsg,
 )
 from std_msgs.msg import Float64MultiArray
+=======
+import rclpy 
+from rclpy.node import Node 
+from dls2_msgs.msg import BaseStateMsg, BlindStateMsg, ControlSignalMsg, TrajectoryGeneratorMsg, TimeDebugMsg
+>>>>>>> origin/main
 from sensor_msgs.msg import Joy
 
 import time
@@ -16,7 +22,7 @@ np.set_printoptions(precision=3, suppress=True)
 
 import threading
 import multiprocessing
-
+from multiprocessing import shared_memory, Value
 
 import copy
 
@@ -58,8 +64,44 @@ os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
 USE_DLS_CONVENTION = False
 
 USE_THREADED_MPC = False
-USE_PROCESS_MPC = False
-MPC_FREQ = 100
+USE_PROCESS_QUEUE_MPC = False
+USE_PROCESS_SHARED_MEMORY_MPC = False
+if(USE_PROCESS_SHARED_MEMORY_MPC):
+        # -------------------- Shared-memory layout for MPC → WBC --------------------------------------
+    # Payload layout (float64):
+    # 0..11   : GRF   (4 legs × 3)
+    # 12..23  : Footholds (4×3)
+    # 24..35  : Joints pos (4×3)
+    # 36..47  : Joints vel (4×3)
+    # 48..59  : Joints acc (4×3)
+    # 60..71  : Predicted state (12)
+    # 72      : best_sample_freq (1)
+    # 73      : last_mpc_loop_time (1)
+    # 74      : stamp_mono (1)
+    N_DBL = 75
+    IDX_GRF   = slice(0, 12)
+    IDX_FH    = slice(12, 24)
+    IDX_JP    = slice(24, 36)
+    IDX_JV    = slice(36, 48)
+    IDX_JA    = slice(48, 60)
+    IDX_PRED  = slice(60, 72)
+    IDX_BSF   = 72
+    IDX_LAST  = 73
+    IDX_STAMP = 74
+
+    def legsattr_to12(legs: LegsAttr) -> np.ndarray:
+        return np.concatenate([np.asarray(legs.FL).reshape(-1),
+                            np.asarray(legs.FR).reshape(-1),
+                            np.asarray(legs.RL).reshape(-1),
+                            np.asarray(legs.RR).reshape(-1)], axis=0)
+
+
+    def vec12_to_legsattr(vec12: np.ndarray) -> LegsAttr:
+        v = np.asarray(vec12).reshape(4, 3)
+        return LegsAttr(FL=v[0].copy(), FR=v[1].copy(), RL=v[2].copy(), RR=v[3].copy())
+    
+
+MPC_FREQ = 100 
 
 USE_SCHEDULER = False  # This enable a call to the run function every tot seconds, instead of as fast as possible
 SCHEDULER_FREQ = 250  # this is only valid if USE_SCHEDULER is True
@@ -106,6 +148,7 @@ class Quadruped_PyMPC_Node(Node):
             self.timer = self.create_timer(
                 1.0 / SCHEDULER_FREQ, self.compute_control_callback
             )
+
 
         # Safety check to not do anything until a first base and blind state are received
         self.first_message_base_arrived = False
@@ -214,12 +257,25 @@ class Quadruped_PyMPC_Node(Node):
             thread_mpc = threading.Thread(target=self.compute_mpc_thread_callback)
             thread_mpc.daemon = True
             thread_mpc.start()
-        if USE_PROCESS_MPC:
+        if(USE_PROCESS_QUEUE_MPC):
             self.input_data_process = multiprocessing.Queue(maxsize=1)
             self.output_data_process = multiprocessing.Queue(maxsize=1)
+            process_mpc = multiprocessing.Process(target=self.compute_mpc_process_queue_callback, args=(self.input_data_process, self.output_data_process))
+            process_mpc.daemon = True
+            process_mpc.start()
+        if(USE_PROCESS_SHARED_MEMORY_MPC):
+            # WBC → MPC: keep a latest-only queue for complex inputs
+            self.input_data_process = multiprocessing.Queue(maxsize=1)
+
+            # MPC → WBC: shared-memory SPSC with seqlock
+            self.shm_out = shared_memory.SharedMemory(create=True, size=N_DBL * 8)
+            self.shm_out_name = self.shm_out.name
+            np.ndarray((N_DBL,), dtype=np.float64, buffer=self.shm_out.buf)[:] = 0.0
+            self.seq_out = Value('Q', 0, lock=False)  # 64-bit sequence, even=stable
+
             process_mpc = multiprocessing.Process(
-                target=self.compute_mpc_process_callback,
-                args=(self.input_data_process, self.output_data_process),
+                target=self.compute_mpc_process_shared_memory_callback,
+                args=(self.input_data_process, self.shm_out_name, self.seq_out),
             )
             process_mpc.daemon = True
             process_mpc.start()
@@ -271,66 +327,112 @@ class Quadruped_PyMPC_Node(Node):
                         self.srbd_controller_interface.compute_RTI()
                     last_mpc_thread_time = time.time()
 
-    def compute_mpc_process_callback(self, input_data_process, output_data_process):
+
+    def compute_mpc_process_queue_callback(self, input_data_process, output_data_process):
         pid = os.getpid()
         os.system("sudo renice -n -21 -p " + str(pid))
         os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
-        affinity_mask = {6, 7}
-        os.sched_setaffinity(pid, affinity_mask)
+        #affinity_mask = {6, 7} 
+        #os.sched_setaffinity(pid, affinity_mask)
+        
         # This process runs forever!
         last_mpc_process_time = time.time()
         while True:
-            if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
-                if not input_data_process.empty():
-                    data = input_data_process.get()
-                    state_current = data[0]
-                    ref_state = data[1]
-                    contact_sequence = data[2]
-                    inertia = data[3]
-                    optimize_swing = data[4]
-                    phase_signal = data[5]
-                    step_freq = data[6]
+            #if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
+            if(not input_data_process.empty()):
+                data = input_data_process.get()
+                state_current = data[0]
+                ref_state = data[1]
+                contact_sequence = data[2]
+                inertia = data[3]
+                optimize_swing = data[4]
+                phase_signal = data[5]
+                step_freq = data[6]
+                
+                nmpc_GRFs,  \
+                nmpc_footholds, \
+                nmpc_joints_pos, \
+                nmpc_joints_vel, \
+                nmpc_joints_acc, \
+                best_sample_freq,\
+                nmpc_predicted_state = self.srbd_controller_interface.compute_control(state_current,
+                                                                        ref_state,
+                                                                        contact_sequence,
+                                                                        inertia,
+                                                                        phase_signal,
+                                                                        step_freq,
+                                                                        optimize_swing)
+                
+                
+                last_mpc_loop_time = time.time() - last_mpc_process_time
+                output_data_process.put([nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq, nmpc_predicted_state, last_mpc_loop_time])
+                
+                
+                if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
+                    # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
+                    # this helps to minize the delay between new state->control in a real case scenario.
+                    self.srbd_controller_interface.compute_RTI()
+                last_mpc_process_time = time.time()
 
-                    (
-                        nmpc_GRFs,
-                        nmpc_footholds,
-                        nmpc_joints_pos,
-                        nmpc_joints_vel,
-                        nmpc_joints_acc,
-                        best_sample_freq,
-                        nmpc_predicted_state,
-                    ) = self.srbd_controller_interface.compute_control(
-                        state_current,
-                        ref_state,
-                        contact_sequence,
-                        inertia,
-                        phase_signal,
-                        step_freq,
-                        optimize_swing,
-                    )
 
-                    last_mpc_loop_time = time.time() - last_mpc_process_time
-                    output_data_process.put(
-                        [
-                            nmpc_GRFs,
-                            nmpc_footholds,
-                            nmpc_joints_pos,
-                            nmpc_joints_vel,
-                            nmpc_joints_acc,
-                            best_sample_freq,
-                            nmpc_predicted_state,
-                            last_mpc_loop_time,
-                        ]
-                    )
+    def compute_mpc_process_shared_memory_callback(self, input_data_process, shm_out_name: str, seq_out: Value):
+        pid = os.getpid()
+        os.system("sudo renice -n -21 -p " + str(pid))
+        os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
+        #affinity_mask = {6, 7} 
+        #os.sched_setaffinity(pid, affinity_mask)
 
-                    if (
-                        cfg.mpc_params["type"] != "sampling"
-                        and cfg.mpc_params["use_RTI"]
-                    ):
-                        # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
-                        # this helps to minize the delay between new state->control in a real case scenario.
-                        self.srbd_controller_interface.compute_RTI()
-                    last_mpc_process_time = time.time()
+        shm = shared_memory.SharedMemory(name=shm_out_name)
+        arr = np.ndarray((N_DBL,), dtype=np.float64, buffer=shm.buf)
+
+        last_mpc_process_time = time.time()
+        while True:
+            #if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
+            if(not input_data_process.empty()):
+                data = input_data_process.get()
+                state_current = data[0]
+                ref_state = data[1]
+                contact_sequence = data[2]
+                inertia = data[3]
+                optimize_swing = data[4]
+                phase_signal = data[5]
+                step_freq = data[6]
+                
+                nmpc_GRFs,  \
+                nmpc_footholds, \
+                nmpc_joints_pos, \
+                nmpc_joints_vel, \
+                nmpc_joints_acc, \
+                best_sample_freq,\
+                nmpc_predicted_state = self.srbd_controller_interface.compute_control(state_current,
+                                                                        ref_state,
+                                                                        contact_sequence,
+                                                                        inertia,
+                                                                        phase_signal,
+                                                                        step_freq,
+                                                                        optimize_swing)
+                last_mpc_loop_time = time.time() - last_mpc_process_time
+
+                # Publish to SHM with seqlock: odd=writing, even=stable
+                s = seq_out.value
+                if s % 2 == 0:
+                    seq_out.value = s + 1
+                # pack payload
+                arr[IDX_GRF]  = legsattr_to12(nmpc_GRFs)
+                arr[IDX_FH]   = legsattr_to12(nmpc_footholds)
+                arr[IDX_JP]   = (nmpc_joints_pos if nmpc_predicted_state is not None else np.zeros(12).reshape(-1)[:12])
+                arr[IDX_JV]   = (nmpc_joints_pos if nmpc_predicted_state is not None else np.zeros(12).reshape(-1)[:12])
+                arr[IDX_JA]   = (nmpc_joints_pos if nmpc_predicted_state is not None else np.zeros(12).reshape(-1)[:12])
+                arr[IDX_PRED] = np.asarray(nmpc_predicted_state).reshape(-1)[:12]
+                arr[IDX_BSF]  = float(best_sample_freq)
+                arr[IDX_LAST] = float(last_mpc_loop_time)
+                arr[IDX_STAMP]= float(time.monotonic())
+                # mark stable
+                seq_out.value = (s | 1) + 1
+
+                if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']:
+                    self.srbd_controller_interface.compute_RTI()
+
 
     def get_base_state_callback(self, msg):
 
@@ -505,19 +607,9 @@ class Quadruped_PyMPC_Node(Node):
             self.inertia = inertia
             self.optimize_swing = optimize_swing
 
-        elif USE_PROCESS_MPC:
-            if not self.input_data_process.full():
-                self.input_data_process.put_nowait(
-                    [
-                        state_current,
-                        ref_state,
-                        contact_sequence,
-                        inertia,
-                        optimize_swing,
-                        self.wb_interface.pgg.phase_signal,
-                        self.wb_interface.pgg.step_freq,
-                    ]
-                )
+        elif(USE_PROCESS_QUEUE_MPC):
+            if(not self.input_data_process.full()):
+                self.input_data_process.put_nowait([state_current, ref_state, contact_sequence, inertia, optimize_swing, self.wb_interface.pgg.phase_signal, self.wb_interface.pgg.step_freq])
 
             if not self.output_data_process.empty():
                 data = self.output_data_process.get_nowait()
@@ -529,7 +621,29 @@ class Quadruped_PyMPC_Node(Node):
                 self.best_sample_freq = data[5]
                 self.nmpc_predicted_state = data[6]
                 self.last_mpc_loop_time = data[7]
-
+        
+        elif(USE_PROCESS_SHARED_MEMORY_MPC):
+            if(not self.input_data_process.full()):
+                self.input_data_process.put_nowait([state_current, ref_state, contact_sequence, inertia, optimize_swing, self.wb_interface.pgg.phase_signal, self.wb_interface.pgg.step_freq])
+            
+            # Read MPC output from shared memory with seqlock and stale-data guard
+            if self.shm_out is not None and self.seq_out is not None:
+                s1 = self.seq_out.value
+                if s1 % 2 == 0:  # writer not in progress
+                    buf = np.ndarray((N_DBL,), dtype=np.float64, buffer=self.shm_out.buf)
+                    tmp = buf.copy()  # local copy
+                    s2 = self.seq_out.value
+                    if s1 == s2 and (s2 % 2 == 0):
+                        self.nmpc_GRFs        = vec12_to_legsattr(tmp[IDX_GRF])
+                        self.nmpc_footholds   = vec12_to_legsattr(tmp[IDX_FH])
+                        self.nmpc_joints_pos  = vec12_to_legsattr(tmp[IDX_JP])
+                        self.nmpc_joints_vel  = vec12_to_legsattr(tmp[IDX_JV])
+                        self.nmpc_joints_acc  = vec12_to_legsattr(tmp[IDX_JA])
+                        self.nmpc_predicted_state = tmp[IDX_PRED].copy()
+                        self.best_sample_freq  = float(tmp[IDX_BSF])
+                        self.last_mpc_loop_time = float(tmp[IDX_LAST])
+                        self.last_mpc_update_mono = float(tmp[IDX_STAMP])
+                        
         else:
             if time.time() - self.last_mpc_time > 1.0 / MPC_FREQ:
                 (
@@ -640,8 +754,12 @@ class Quadruped_PyMPC_Node(Node):
         trajectory_generator_msg.stance_legs[3] = bool(contact_sequence[0, 3])
         trajectory_generator_msg.kp = self.impedence_joint_position_gain
         trajectory_generator_msg.kd = self.impedence_joint_velocity_gain
-        trajectory_generator_msg.timestamp = self.last_mpc_loop_time
         self.publisher_trajectory_generator.publish(trajectory_generator_msg)
+
+        time_debug_msg = TimeDebugMsg()
+        time_debug_msg.time_wbc = self.loop_time
+        time_debug_msg.time_mpc = self.last_mpc_loop_time
+        self.publisher_time_debug.publish(time_debug_msg)
 
 
 def main():
