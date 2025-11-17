@@ -41,7 +41,7 @@ if [ $? != 0 ]; then
     # Right pane (index 1) - Monitoring
     tmux send-keys -t $SESSION_NAME:2.1 "cd $MPC_HOME_PATH/ros2" C-m
     tmux send-keys -t $SESSION_NAME:2.1 "source msgs_ws/install/setup.bash" C-m
-    tmux send-keys -t $SESSION_NAME:2.1 "ros2 launch message_converters message_converters" C-m
+    tmux send-keys -t $SESSION_NAME:2.1 "ros2 launch message_converter message_converter.launch.py" C-m
     
     # Window 4: Console - For monitoring/debugging
     tmux new-window -t $SESSION_NAME:3 -n "console"

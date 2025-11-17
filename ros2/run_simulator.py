@@ -1,6 +1,9 @@
 import rclpy 
 from rclpy.node import Node 
 from dls2_msgs.msg import BaseStateMsg, BlindStateMsg, ControlSignalMsg, TrajectoryGeneratorMsg
+from sensor_msgs.msg import Imu, JointState
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Bool
 
 import time
 import numpy as np
@@ -41,6 +44,16 @@ class Simulator_Node(Node):
         # Subscribers and Publishers
         self.publisher_base_state = self.create_publisher(BaseStateMsg,"/dls2/base_state", 1)
         self.publisher_blind_state = self.create_publisher(BlindStateMsg,"/dls2/blind_state", 1)
+        self.publisher_imu = self.create_publisher(Imu, "/imu", 1)
+        self.publisher_odom = self.create_publisher(Odometry, "/odom", 1)
+        self.publisher_joint_states = self.create_publisher(JointState, "/joint_states", 1)
+        
+        # Contact publishers for each foot
+        self.publisher_contact_FL = self.create_publisher(Bool, "/contact/FL", 1)
+        self.publisher_contact_FR = self.create_publisher(Bool, "/contact/FR", 1)
+        self.publisher_contact_RL = self.create_publisher(Bool, "/contact/RL", 1)
+        self.publisher_contact_RR = self.create_publisher(Bool, "/contact/RR", 1)
+        
         self.subscriber_control_signal = self.create_subscription(ControlSignalMsg,"dls2/quadruped_pympc_torques", self.get_torques_callback, 1)
         self.subscriber_trajectory_generator = self.create_subscription(TrajectoryGeneratorMsg,"dls2/trajectory_generator", self.get_trajectory_generator_callback, 1)
 
@@ -65,6 +78,11 @@ class Simulator_Node(Node):
 
         self.last_render_time = time.time()
         self.env.render()  
+
+        # Extract joint names in order [FL, FR, RL, RR]
+        self.joint_names = []
+        for leg_name in ['FL', 'FR', 'RL', 'RR']:
+            self.joint_names.extend(self.env.robot_cfg.leg_joints[leg_name])
 
         # Torque vector
         self.desired_tau = LegsAttr(*[np.zeros((int(self.env.mjModel.nu/4), 1)) for _ in range(4)])
@@ -121,6 +139,87 @@ class Simulator_Node(Node):
         blind_state_msg.joints_position = self.env.mjData.qpos[7:]
         blind_state_msg.joints_velocity = self.env.mjData.qvel[6:]
         self.publisher_blind_state.publish(blind_state_msg)
+
+        # Publish Joint States
+        joint_state_msg = JointState()
+        joint_state_msg.header.stamp = self.get_clock().now().to_msg()
+        joint_state_msg.name = self.joint_names
+        joint_state_msg.position = self.env.mjData.qpos[7:].tolist()
+        joint_state_msg.velocity = self.env.mjData.qvel[6:].tolist()
+        joint_state_msg.effort = action.tolist()
+        self.publisher_joint_states.publish(joint_state_msg)
+
+        # Publish IMU data
+        imu_msg = Imu()
+        imu_msg.header.stamp = self.get_clock().now().to_msg()
+        imu_msg.header.frame_id = "base_link"
+        
+        # Orientation (quaternion)
+        imu_msg.orientation.x = self.env.mjData.qpos[3]
+        imu_msg.orientation.y = self.env.mjData.qpos[4]
+        imu_msg.orientation.z = self.env.mjData.qpos[5]
+        imu_msg.orientation.w = self.env.mjData.qpos[6]
+        
+        # Angular velocity (in body frame)
+        imu_msg.angular_velocity.x = base_ang_vel[0]
+        imu_msg.angular_velocity.y = base_ang_vel[1]
+        imu_msg.angular_velocity.z = base_ang_vel[2]
+        
+        # Linear acceleration (get from sensor data)
+        # MuJoCo provides sensor accelerometer data if available
+        imu_msg.linear_acceleration.x = self.env.mjData.qacc[0]
+        imu_msg.linear_acceleration.y = self.env.mjData.qacc[1]
+        imu_msg.linear_acceleration.z = self.env.mjData.qacc[2] + cfg.gravity_constant
+        
+        self.publisher_imu.publish(imu_msg)
+
+        # Publish Odometry data
+        odom_msg = Odometry()
+        odom_msg.header.stamp = self.get_clock().now().to_msg()
+        odom_msg.header.frame_id = "odom"
+        odom_msg.child_frame_id = "base_link"
+        
+        # Position
+        odom_msg.pose.pose.position.x = base_pos[0]
+        odom_msg.pose.pose.position.y = base_pos[1]
+        odom_msg.pose.pose.position.z = base_pos[2]
+        
+        # Orientation
+        odom_msg.pose.pose.orientation.x = self.env.mjData.qpos[3]
+        odom_msg.pose.pose.orientation.y = self.env.mjData.qpos[4]
+        odom_msg.pose.pose.orientation.z = self.env.mjData.qpos[5]
+        odom_msg.pose.pose.orientation.w = self.env.mjData.qpos[6]
+        
+        # Linear velocity (in world frame)
+        odom_msg.twist.twist.linear.x = base_lin_vel[0]
+        odom_msg.twist.twist.linear.y = base_lin_vel[1]
+        odom_msg.twist.twist.linear.z = base_lin_vel[2]
+        
+        # Angular velocity (in body frame)
+        odom_msg.twist.twist.angular.x = base_ang_vel[0]
+        odom_msg.twist.twist.angular.y = base_ang_vel[1]
+        odom_msg.twist.twist.angular.z = base_ang_vel[2]
+        
+        self.publisher_odom.publish(odom_msg)
+
+        # Publish foot contact states
+        contact_state, _ = self.env.feet_contact_state()
+        
+        contact_fl_msg = Bool()
+        contact_fl_msg.data = bool(contact_state.FL)
+        self.publisher_contact_FL.publish(contact_fl_msg)
+        
+        contact_fr_msg = Bool()
+        contact_fr_msg.data = bool(contact_state.FR)
+        self.publisher_contact_FR.publish(contact_fr_msg)
+        
+        contact_rl_msg = Bool()
+        contact_rl_msg.data = bool(contact_state.RL)
+        self.publisher_contact_RL.publish(contact_rl_msg)
+        
+        contact_rr_msg = Bool()
+        contact_rr_msg.data = bool(contact_state.RR)
+        self.publisher_contact_RR.publish(contact_rr_msg)
 
 
         # Render only at a certain frequency -----------------------------------------------------------------

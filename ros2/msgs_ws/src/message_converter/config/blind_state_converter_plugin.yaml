@@ -2,7 +2,7 @@ message_converter:
   ros__parameters:
     contactdetection_topic: "/state_estimator/contact_detection"
     joint_states_topic: "/joint_states"
-    blind_pub_topic: "/dls2/blind_state"
+    blind_pub_topic: "/debug/blind_state"
     joints_order: [
        FL_shoulder_joint,
        FL_thigh_joint,
