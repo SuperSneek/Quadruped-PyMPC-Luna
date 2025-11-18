@@ -10,7 +10,7 @@ from std_msgs.msg import Float64MultiArray
 from sensor_msgs.msg import Joy
 from control_msgs.msg import MultiDOFCommand
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-
+from rclpy.qos import DurabilityPolicy, HistoryPolicy
 import time
 import numpy as np
 
@@ -79,8 +79,12 @@ class Quadruped_PyMPC_Node(Node):
         super().__init__("Quadruped_PyMPC_Node")
 
         # Subscribers and Publishers
-        qos = QoSProfile(depth=1)
-        qos.reliability = ReliabilityPolicy.BEST_EFFORT
+        qos = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=5,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+        )
 
         self.subscription_base_state = self.create_subscription(
             BaseStateMsg, "/dls2/base_state", self.get_base_state_callback, qos

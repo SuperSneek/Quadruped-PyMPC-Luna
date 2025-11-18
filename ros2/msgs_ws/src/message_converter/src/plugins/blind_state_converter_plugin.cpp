@@ -99,7 +99,7 @@ namespace message_converter
             auto contact_topic = node_->declare_parameter<std::string>("contactdetection_topic", "/contact_detection");
             auto joint_states_topic = node_->declare_parameter<std::string>("joint_states_topic", "/joint_states");
             auto pub_topic = node_->declare_parameter<std::string>("blind_pub_topic", "/blind_state_topic");
-            auto sync_tolerance_ms = node_->declare_parameter<int>("sync_tolerance_ms", 200);
+            auto sync_tolerance_ms = node_->declare_parameter<int>("sync_tolerance_ms", 10);
             joints_order_ = node_->declare_parameter<std::vector<std::string>>("joints_order", 
               {"FL_shoulder_joint", "FL_thigh_joint", "FL_calf_joint",
                "FR_shoulder_joint", "FR_thigh_joint", "FR_calf_joint",

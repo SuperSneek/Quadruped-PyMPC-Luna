@@ -63,13 +63,13 @@ using ExactTimePolicy = message_filters::sync_policies::ExactTime<Odom, IMU>;
             msg_.linear_velocity[0] = odom->twist.twist.linear.x;
             msg_.linear_velocity[1] = odom->twist.twist.linear.y;
             msg_.linear_velocity[2] = odom->twist.twist.linear.z;
-            msg_.angular_velocity[0] = imu->angular_velocity.x;
-            msg_.angular_velocity[1] = imu->angular_velocity.y;
-            msg_.angular_velocity[2] = imu->angular_velocity.z;
+            msg_.angular_velocity[0] = odom->twist.twist.angular.x;
+            msg_.angular_velocity[1] = odom->twist.twist.angular.y;
+            msg_.angular_velocity[2] = odom->twist.twist.angular.z;
 
-            msg_.linear_acceleration[0] = imu->linear_acceleration.x;
-            msg_.linear_acceleration[1] = imu->linear_acceleration.y;
-            msg_.linear_acceleration[2] = imu->linear_acceleration.z;
+            //msg_.linear_acceleration[0] = imu->linear_acceleration.x;
+            //msg_.linear_acceleration[1] = imu->linear_acceleration.y;
+            //msg_.linear_acceleration[2] = imu->linear_acceleration.z;
 
             //fill angular acceleration with zeros for now
             msg_.angular_acceleration[0] = 0.0;

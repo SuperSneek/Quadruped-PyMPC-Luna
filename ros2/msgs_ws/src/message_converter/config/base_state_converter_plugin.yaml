@@ -3,4 +3,4 @@ message_converter:
     odom_topic: "/odom"
     imu_topic: "/imu"
     base_pub_topic: "/dls2/base_state"
-    sync_tolerance_ms: 200
+    sync_tolerance_ms: 6
