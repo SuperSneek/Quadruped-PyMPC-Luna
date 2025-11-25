@@ -321,6 +321,8 @@ def run_simulation(
                 env.reset(random=True)
                 quadrupedpympc_wrapper.reset(initial_feet_pos=env.feet_pos(frame="world"))
 
+            time.sleep(0.01)  # To avoid overloading the CPU
+
         if h5py_writer is not None:  # Save episode trajectory data to disk.
             ep_obs_history = collate_obs(ep_state_history)  # | collate_obs(ep_ctrl_state_history)
             ep_traj_time = np.asarray(ep_time)[:, np.newaxis]
