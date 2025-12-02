@@ -102,7 +102,7 @@ class Quadruped_PyMPC_Node(Node):
             ControlSignalMsg, "dls2/quadruped_pympc_torques", 1
         )
         self.publisher_trajectory_generator = self.create_publisher(
-            TrajectoryGeneratorMsg, "dls2/trajectory_generator", 1
+            TrajectoryGeneratorMsg, "pid_controller_luna/reference", 1
         )
         self.publisher_joint_trajectory = self.create_publisher(
             MultiDOFCommand, "pid_controller/reference", 1
@@ -649,6 +649,19 @@ class Quadruped_PyMPC_Node(Node):
         trajectory_generator_msg.kp = self.impedence_joint_position_gain
         trajectory_generator_msg.kd = self.impedence_joint_velocity_gain
         trajectory_generator_msg.timestamp = self.last_mpc_loop_time
+        trajectory_generator_msg.joint_names = [
+            "FL_shoulder_joint",
+            "FL_upper_leg_joint",
+            "FL_lower_leg_joint",
+            "FR_shoulder_joint",
+            "FR_upper_leg_joint",
+            "FR_lower_leg_joint",
+            "BL_shoulder_joint",
+            "BL_upper_leg_joint",
+            "BL_lower_leg_joint",
+            "BR_shoulder_joint",
+            "BR_upper_leg_joint",
+            "BR_lower_leg_joint"]
         self.publisher_trajectory_generator.publish(trajectory_generator_msg)
 
         # Publish JointTrajectory message for ROS2 trajectory controller
