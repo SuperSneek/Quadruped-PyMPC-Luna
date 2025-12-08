@@ -1,6 +1,6 @@
 message_converter:
   ros__parameters:
-    odom_topic: "/sensor_fusion"
-    imu_topic: "/imu"
+    odom_topic: "/state_estimator/imu_odometry"
+    imu_topic: "/imu/data"
     base_pub_topic: "/dls2/base_state"
     sync_tolerance_ms: 6

@@ -105,7 +105,7 @@ class Quadruped_PyMPC_Node(Node):
             TrajectoryGeneratorMsg, "dls2/trajectory_generator", 1
         )
         self.publisher_joint_trajectory = self.create_publisher(
-            MultiDOFCommand, "pid_controller/reference", 1
+            Float64MultiArray, "position_controller/commands", 1
         )
         if USE_SCHEDULER:
             self.timer = self.create_timer(
@@ -652,17 +652,26 @@ class Quadruped_PyMPC_Node(Node):
         self.publisher_trajectory_generator.publish(trajectory_generator_msg)
 
         # Publish JointTrajectory message for ROS2 trajectory controller
-        joint_trajectory_msg = MultiDOFCommand()
+        joint_trajectory_msg = Float64MultiArray()
         
         # Define joint names in the order they appear in your robot
-        joint_trajectory_msg.dof_names = [
-            "FL_shoulder_joint", "FL_thigh_joint", "FL_calf_joint",
-            "FR_shoulder_joint", "FR_thigh_joint", "FR_calf_joint",
-            "BL_shoulder_joint", "BL_thigh_joint", "BL_calf_joint",
-            "BR_shoulder_joint", "BR_thigh_joint", "BR_calf_joint"
-        ]
+        #joint_trajectory_msg.dof_names = [
+        #    "FL_shoulder_joint", "FL_thigh_joint", "FL_calf_joint",
+        #    "FR_shoulder_joint", "FR_thigh_joint", "FR_calf_joint",
+        #    "BL_shoulder_joint", "BL_thigh_joint", "BL_calf_joint",
+        #    "BR_shoulder_joint", "BR_thigh_joint", "BR_calf_joint"
+        #]
         
-        joint_trajectory_msg.values = trajectory_generator_msg.joints_position.tolist()
+
+        joint_trajectory_msg.data = np.concatenate(
+            [
+                [pd_target_joints_pos.FL[0],pd_target_joints_pos.FL[1],pd_target_joints_pos.FL[2]],
+                [pd_target_joints_pos.FR[0],pd_target_joints_pos.FR[1],pd_target_joints_pos.FR[2]],
+                [pd_target_joints_pos.RL[0],pd_target_joints_pos.RL[1],pd_target_joints_pos.RL[2]],
+                [pd_target_joints_pos.RR[0],pd_target_joints_pos.RR[1],pd_target_joints_pos.RR[2]],
+            ],
+            axis=0,
+        ).flatten()
         
         self.publisher_joint_trajectory.publish(joint_trajectory_msg)
 

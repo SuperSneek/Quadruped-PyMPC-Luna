@@ -6,6 +6,7 @@ with the received joint states in real-time.
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 import numpy as np
 import time
@@ -35,13 +36,18 @@ class RobotVisualizer(Node):
         self.env.mjModel.opt.gravity[2] = -cfg.gravity_constant
         self.env.reset(random=False)
         self.env.render()
-
         # Subscribe to joint_states topic
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
         self.subscription = self.create_subscription(
             BlindStateMsg,
             "/dls2/blind_state",
             self.joint_states_callback,
-            qos_profile=1,
+            qos_profile=qos_profile,
+        
         )
 
         # Timing for rendering
