@@ -1,0 +1,14 @@
+casadi
+numpy
+matplotlib
+jaxlib
+jax
+scipy==1.15.1  
+compilers 
+cmake 
+ninja 
+colcon-common-extensions 
+tqdm
+gymnasium
+jinja2
+typeguard
