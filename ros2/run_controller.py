@@ -70,7 +70,7 @@ SCHEDULER_FREQ = 250 # this is only valid if USE_SCHEDULER is True
 USE_FIXED_LOOP_TIME = False # This is used to fix the clock time of periodic gait gen to 1/SCHEDULER_FREQ
 USE_SATURATED_LOOP_TIME = True # This is used to cap the clock time of periodic gait gen to max 250Hz
 
-USE_SMOOTH_VELOCITY = False
+USE_SMOOTH_VELOCITY = True
 USE_SMOOTH_HEIGHT = True
 
 # Shell for the controllers ----------------------------------------------
@@ -105,7 +105,7 @@ class Quadruped_PyMPC_Node(Node):
             TrajectoryGeneratorMsg, "dls2/trajectory_generator", 1
         )
         self.publisher_joint_trajectory = self.create_publisher(
-            Float64MultiArray, "position_controller/commands", 1
+            Float64MultiArray, "pympc_position_commands", 1
         )
         if USE_SCHEDULER:
             self.timer = self.create_timer(
