@@ -134,7 +134,7 @@ mpc_params = {
 
     # this is used only in the case 'use_RTI' is false in a single mpc feedback loop.
     # More is better, but slower computation!
-    'num_qp_iterations':                       1,
+    'num_qp_iterations':                       5,
 
     # this is used to speeding up or robustify acados' solver (hpipm).
     'solver_mode':                             'balance',  # balance, robust, speed, crazy_speed
