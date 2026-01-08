@@ -36,6 +36,9 @@ namespace message_converter
             {
                 buildIndexMapping(joint_state);
             }
+
+            //Debug message
+            RCLCPP_DEBUG(node_->get_logger(), "Blind State Converter: Received JointState with %zu joints.", joint_state->name.size());
             
             //Set float timestamp
             msg_.timestamp = joint_state->header.stamp.sec + joint_state->header.stamp.nanosec * 1e-9;
@@ -86,8 +89,8 @@ namespace message_converter
             joints_order_ = node_->declare_parameter<std::vector<std::string>>("joints_order", 
               {"FL_shoulder_joint", "FL_thigh_joint", "FL_calf_joint",
                "FR_shoulder_joint", "FR_thigh_joint", "FR_calf_joint",
-               "RL_shoulder_joint", "RL_thigh_joint", "RL_calf_joint",
-               "RR_shoulder_joint", "RR_thigh_joint", "RR_calf_joint"});
+               "BL_shoulder_joint", "BL_thigh_joint", "BL_calf_joint",
+               "BR_shoulder_joint", "BR_thigh_joint", "BR_calf_joint"});
 
             //Subscriber
             auto qos = rclcpp::SensorDataQoS();
