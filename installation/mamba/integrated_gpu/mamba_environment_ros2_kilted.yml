@@ -1,0 +1,34 @@
+name: quadruped_pympc_env
+channels:
+- conda-forge
+- nvidia
+- robostack-kilted
+dependencies:
+- pip
+- python
+- casadi
+- numpy
+- matplotlib
+- jaxlib
+- jax
+- tmux
+- meshcat-python 
+- scipy==1.15.1  
+- pinocchio
+- adam-robotics[all]
+- ros-kilted-desktop
+- ros-kilted-plotjuggler-ros
+- ros-kilted-rmw-cyclonedds-cpp
+- compilers 
+- cmake 
+- pkg-config 
+- make 
+- ninja 
+- colcon-common-extensions 
+- tqdm
+- gymnasium
+- pip:
+  - mujoco
+  - readchar
+  - liecasadi
+

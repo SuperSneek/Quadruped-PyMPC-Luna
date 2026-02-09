@@ -2,11 +2,11 @@ import rclpy
 from rclpy.node import Node 
 from dls2_interface.msg import BaseState, BlindState, ControlSignal, TrajectoryGenerator, TimeDebug
 from sensor_msgs.msg import Joy
-
+from std_msgs.msg import Float64MultiArray
 import time
 import numpy as np
 np.set_printoptions(precision=3, suppress=True)
-
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 import threading
 import multiprocessing
 from multiprocessing import shared_memory, Value
@@ -51,7 +51,7 @@ if(USE_PROCESS_SHARED_MEMORY_MPC):
     # 12..23  : Footholds (4×3)
     # 24..35  : Joints pos (4×3)
     # 36..47  : Joints vel (4×3)
-    # 48..59  : Joints acc (4×3)
+    # 48..59  : Joints acc (4×3)from rclpy.qos import QoSProfile, QoSReliabilityPolicy
     # 60..71  : Predicted state (12)
     # 72      : best_sample_freq (1)
     # 73      : last_mpc_loop_time (1)
@@ -80,7 +80,7 @@ if(USE_PROCESS_SHARED_MEMORY_MPC):
     
 
 MPC_FREQ = 100 
-
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 USE_SCHEDULER = False # This enable a call to the run function every tot seconds, instead of as fast as possible
 SCHEDULER_FREQ = 250 # this is only valid if USE_SCHEDULER is True
 
@@ -105,6 +105,14 @@ class Quadruped_PyMPC_Node(Node):
         if(USE_SCHEDULER):
             self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_control_callback)
         
+        qos_best_effort = QoSProfile(depth=1, reliability=QoSReliabilityPolicy.BEST_EFFORT)
+        
+        self.publisher_position = self.create_publisher(
+            Float64MultiArray, "pympc_position_commands", qos_best_effort
+        )
+        self.publisher_efforts = self.create_publisher(
+            Float64MultiArray, "pympc_effort_commands", qos_best_effort
+        )
 
         # Safety check to not do anything until a first base and blind state are received
         self.first_message_base_arrived = False
@@ -212,6 +220,7 @@ class Quadruped_PyMPC_Node(Node):
 
         # Interactive Command Line ----------------------------
         from console import Console
+
         self.console = Console(controller_node=self)
         thread_console = threading.Thread(target=self.console.interactive_command_line)
         thread_console.daemon = True
@@ -643,6 +652,26 @@ class Quadruped_PyMPC_Node(Node):
         time_debug_msg.time_wbc = self.loop_time
         time_debug_msg.time_mpc = self.last_mpc_loop_time
         self.publisher_time_debug.publish(time_debug_msg)
+        
+        joint_pos_msg = Float64MultiArray()
+        
+        joint_pos_msg.data = np.concatenate(
+            [
+                [pd_target_joints_pos.FL[0],pd_target_joints_pos.FL[1],pd_target_joints_pos.FL[2]],
+                [pd_target_joints_pos.FR[0],pd_target_joints_pos.FR[1],pd_target_joints_pos.FR[2]],
+                [pd_target_joints_pos.RL[0],pd_target_joints_pos.RL[1],pd_target_joints_pos.RL[2]],
+                [pd_target_joints_pos.RR[0],pd_target_joints_pos.RR[1],pd_target_joints_pos.RR[2]],
+            ],
+            axis=0,
+        ).flatten()
+        
+        self.publisher_position.publish(joint_pos_msg)
+        
+        effort_msg = Float64MultiArray()
+        effort_msg.data = np.concatenate(
+            [self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0
+        ).flatten()
+        self.publisher_efforts.publish(effort_msg)
 
 
 
